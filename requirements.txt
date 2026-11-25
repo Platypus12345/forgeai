@@ -1,0 +1,5 @@
+# Core factory: stdlib + two small deps.
+requests>=2.31.0
+pypdf>=4.2.0
+# Optional web UI (stretch goal). Not required for the CLI.
+streamlit>=1.36.0

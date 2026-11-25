@@ -1,0 +1,7 @@
+I need an assistant that answers HR policy questions for our shore staff. People
+constantly ask the HR team the same things about annual leave, sick leave, pay
+dates, overtime, notice periods and the hybrid working rules, and we want them to
+self-serve. It should also be able to tell someone their shipboard rotation
+entitlement and how many sea-service days they need for their next certificate
+revalidation. Keep answers short and plain, and it must never give anyone advice
+about their individual case or make a decision for a manager.

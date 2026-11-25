@@ -1,0 +1,8 @@
+We need a procurement assistant for our technical purchasing team who buy ship
+spares. It should answer questions about the spares catalogue - part numbers,
+prices, lead times, stock on hand, which supplier - and about our procurement
+rules: who approves what value, how many quotations we need, the emergency
+procedure, and each supplier's payment and warranty terms. It needs to work out
+order totals and discounts, and tell people whether a delivery date is realistic
+given today's date and the lead time. It must not negotiate with suppliers or
+commit the company to anything.

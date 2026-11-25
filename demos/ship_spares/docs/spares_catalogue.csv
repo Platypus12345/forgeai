@@ -1,0 +1,25 @@
+part_no,description,category,vessel_class,unit_price_usd,lead_time_days,supplier,stock_qty,min_order_qty
+MP-1042,Main engine fuel injector nozzle,Propulsion,Handysize Bulker,1245.00,21,Nordhavn Marine Supply,6,2
+MP-1043,Main engine fuel injector holder,Propulsion,Handysize Bulker,890.50,21,Nordhavn Marine Supply,4,2
+MP-2210,Turbocharger cartridge assembly,Propulsion,Panamax Bulker,18750.00,60,Kobe Turbo Systems,0,1
+MP-2215,Turbocharger nozzle ring,Propulsion,Panamax Bulker,3420.00,45,Kobe Turbo Systems,2,1
+AX-3301,Auxiliary generator cylinder head,Auxiliary,All,4680.00,35,Nordhavn Marine Supply,3,1
+AX-3310,Auxiliary generator fuel pump,Auxiliary,All,2190.00,28,Baltic Diesel Parts,5,1
+PU-4102,Ballast pump mechanical seal,Pumps,All,615.75,14,Baltic Diesel Parts,12,4
+PU-4108,Bilge pump impeller bronze,Pumps,All,328.40,10,Baltic Diesel Parts,20,4
+PU-4115,Fire pump casing gasket set,Pumps,All,142.00,7,Harbour Chandlers Ltd,40,10
+SF-5001,SOLAS lifejacket adult,Safety,All,78.90,7,Harbour Chandlers Ltd,120,20
+SF-5004,Immersion suit universal,Safety,All,315.00,14,Harbour Chandlers Ltd,24,6
+SF-5012,EEBD emergency escape breathing device,Safety,All,520.00,21,Harbour Chandlers Ltd,16,4
+SF-5020,Fire extinguisher CO2 5kg,Safety,All,186.25,10,Harbour Chandlers Ltd,35,10
+EL-6003,Switchboard circuit breaker 400A,Electrical,All,1960.00,30,Kobe Turbo Systems,2,1
+EL-6010,Navigation light LED masthead,Electrical,All,445.00,14,Harbour Chandlers Ltd,8,2
+EL-6022,Shaft generator control card,Electrical,Panamax Bulker,7250.00,55,Kobe Turbo Systems,1,1
+DK-7004,Mooring winch brake band,Deck,Handysize Bulker,1875.00,40,Nordhavn Marine Supply,2,1
+DK-7011,Hatch cover rubber packing per metre,Deck,Handysize Bulker,58.60,21,Nordhavn Marine Supply,300,50
+DK-7020,Anchor chain shackle 76mm,Deck,Panamax Bulker,2340.00,45,Nordhavn Marine Supply,4,2
+HV-8002,Provision room compressor,HVAC,All,3890.00,35,Baltic Diesel Parts,1,1
+HV-8009,Accommodation AC filter set,HVAC,All,96.80,7,Harbour Chandlers Ltd,60,10
+WT-9001,Fresh water generator evaporator plate,Water Treatment,All,1130.00,30,Baltic Diesel Parts,6,2
+WT-9007,Oily water separator filter element,Water Treatment,All,487.50,18,Baltic Diesel Parts,14,4
+WT-9012,Sewage treatment plant aerator,Water Treatment,All,2760.00,42,Baltic Diesel Parts,2,1
