@@ -10,6 +10,7 @@ the same artifacts from `runs/`.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import streamlit as st
@@ -27,12 +28,51 @@ REPO = Path(__file__).resolve().parent
 UPLOADS = REPO / "uploads"
 
 
+def apply_runtime_credentials() -> None:
+    """Make the hosted app usable without spending the author's own quota.
+
+    A public deployment is a shop window, not a free compute service. The key
+    is never committed and never baked into the deployment: it comes either
+    from Streamlit secrets, if whoever hosts this chooses to fund the demo, or
+    from a visitor's own key typed into the sidebar and held for that session
+    only. With no key at all the app still does something honest - it reads
+    the committed runs and answers through the deterministic extractive path -
+    which is the same no-model degradation the CLI falls back to.
+    """
+    for key in (
+        "FORGEAI_PROVIDER", "FORGEAI_BASE_URL", "FORGEAI_MODEL", "FORGEAI_API_KEY",
+    ):
+        try:
+            if key in st.secrets:  # type: ignore[operator]
+                os.environ.setdefault(key, str(st.secrets[key]))
+        except Exception:
+            pass  # no secrets.toml at all, which is normal when run locally
+
+    typed = st.sidebar.text_input(
+        "API key (optional, this session only)",
+        type="password",
+        help=(
+            "A Groq or other OpenAI-compatible key. It is kept for this "
+            "browser session, never written to disk and never logged. Without "
+            "one, the Runs and Chat pages still work on the committed "
+            "artifacts using the deterministic fallback."
+        ),
+    )
+    if typed.strip():
+        os.environ["FORGEAI_API_KEY"] = typed.strip()
+        os.environ.setdefault("FORGEAI_PROVIDER", "openai")
+        os.environ.setdefault("FORGEAI_BASE_URL", "https://api.groq.com/openai/v1")
+        os.environ.setdefault("FORGEAI_MODEL", "openai/gpt-oss-20b")
+
+
 def model_banner() -> FactoryConfig:
     cfg = FactoryConfig()
     if cfg.model.provider == "heuristic":
-        st.sidebar.error(
-            "No model configured. The factory will run on its deterministic "
-            "fallbacks only. Set FORGEAI_API_KEY and FORGEAI_BASE_URL in .env."
+        st.sidebar.warning(
+            "No model configured, so the factory would run on its "
+            "deterministic fallbacks only. Paste a key in the sidebar, or set "
+            "FORGEAI_API_KEY and FORGEAI_BASE_URL in .env when running "
+            "locally. Reading past runs needs no key."
         )
     else:
         st.sidebar.success(f"Model: {cfg.model.describe()}")
@@ -71,7 +111,23 @@ def page_build() -> None:
                     )
     elif source == "Point at a folder":
         typed = st.text_input("Folder path", value=str(REPO / "demos" / "hr_policy" / "docs"))
-        docs_dir = Path(typed) if typed else None
+        # On a public deployment this box would otherwise read any directory
+        # the container can see, so it is confined to the checkout. Locally
+        # that is no restriction worth minding; on a hosted instance it is the
+        # difference between a demo and a file browser.
+        if typed:
+            candidate = Path(typed).expanduser()
+            try:
+                resolved = candidate.resolve()
+                resolved.relative_to(REPO.resolve())
+                docs_dir = resolved
+            except (ValueError, OSError):
+                st.error(
+                    "For safety this box only opens folders inside the "
+                    "ForgeAI checkout. Use the upload option for anything "
+                    "else, or run the CLI locally."
+                )
+                docs_dir = None
     else:
         uploaded = st.file_uploader(
             "Documents (pdf, csv, md, txt)", accept_multiple_files=True
@@ -260,6 +316,7 @@ def page_chat() -> None:
 
 st.sidebar.title("ForgeAI")
 st.sidebar.caption("The agent that builds agents")
+apply_runtime_credentials()
 PAGE = st.sidebar.radio("", ["Build", "Runs", "Chat"], label_visibility="collapsed")
 st.sidebar.divider()
 

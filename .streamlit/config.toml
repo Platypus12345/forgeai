@@ -1,0 +1,12 @@
+# Deployment defaults for the hosted UI. Nothing secret lives here; the API
+# key is supplied per session in the sidebar, or through Streamlit secrets by
+# whoever hosts the instance.
+[server]
+headless = true
+maxUploadSize = 25
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
