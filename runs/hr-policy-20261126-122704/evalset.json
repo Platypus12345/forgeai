@@ -1,0 +1,368 @@
+{
+  "agent_id": "shore-staff-policy-guide-terse-rules",
+  "counts": {
+    "answerable": 12,
+    "out_of_scope": 6,
+    "edge": 4
+  },
+  "total": 22,
+  "generation_prompt_files": [
+    "prompts/evalgen_answerable.md",
+    "prompts/evalgen_refusal.md",
+    "prompts/evalgen_edge.md"
+  ],
+  "notes": [
+    "12 of 22 cases came from the deterministic generator because the model's output was unusable for that seed. These are mechanically derived and test retrieval more than comprehension."
+  ],
+  "cases": [
+    {
+      "case_id": "ans-001",
+      "kind": "answerable",
+      "question": "How much annual leave do I get as a full-time shore staff member, and how does it build up each month?",
+      "expected_facts": [
+        "25 days of paid annual leave",
+        "8 public holidays",
+        "2.08 days per completed calendar month of service"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 2 states full-time shore staff accrue 25 days plus 8 public holidays, and that leave accrues monthly at 2.08 days per completed calendar month.",
+      "origin": "model",
+      "seed_chunk": "leave_policy#1"
+    },
+    {
+      "case_id": "ans-002",
+      "kind": "answerable",
+      "question": "How much leave do I get if I've been with the company for over five years?",
+      "expected_facts": [
+        "5 or more continuous years of service",
+        "28 days"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 2 states that staff with 5 or more continuous years of service accrue 28 days.",
+      "origin": "model",
+      "seed_chunk": "leave_policy#1"
+    },
+    {
+      "case_id": "ans-003",
+      "kind": "answerable",
+      "question": "What do the documents say about minimum cent pensionable meridian?",
+      "expected_facts": [
+        "5",
+        "8"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Derived deterministically from a sentence in pay_and_benefits.pdf#2.",
+      "origin": "fallback",
+      "seed_chunk": "pay_and_benefits#2"
+    },
+    {
+      "case_id": "ans-004",
+      "kind": "answerable",
+      "question": "What do the documents say about meridian give week notice?",
+      "expected_facts": [
+        "4",
+        "1"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Derived deterministically from a sentence in pay_and_benefits.pdf#2.",
+      "origin": "fallback",
+      "seed_chunk": "pay_and_benefits#2"
+    },
+    {
+      "case_id": "ans-005",
+      "kind": "answerable",
+      "question": "How many days a week do I need to be in the office, and what are the core hours I have to be contactable?",
+      "expected_facts": [
+        "minimum of 3 days per week",
+        "10:00 to 16:00 local time"
+      ],
+      "expected_source_docs": [
+        "workplace_conduct.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 1 (Hybrid Working): 'Shore staff are required to attend their contractual office location for a minimum of 3 days per week. Core hours, during which staff must be contactable, are 10:00 to 16:00 local time.'",
+      "origin": "model",
+      "seed_chunk": "workplace_conduct#1"
+    },
+    {
+      "case_id": "ans-006",
+      "kind": "answerable",
+      "question": "What's the home working equipment allowance, who can claim it, and what does it cover?",
+      "expected_facts": [
+        "one-off home working equipment allowance of 350",
+        "staff who have completed probation",
+        "desk, chair, monitor and peripherals"
+      ],
+      "expected_source_docs": [
+        "workplace_conduct.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 2 (Home Working Equipment): 'A one-off home working equipment allowance of 350 is available to staff who have completed probation. The allowance covers a desk, chair, monitor and peripherals.'",
+      "origin": "model",
+      "seed_chunk": "workplace_conduct#1"
+    },
+    {
+      "case_id": "ans-007",
+      "kind": "answerable",
+      "question": "How far in advance do I need to book my leave, and is there a longer notice period for extended breaks?",
+      "expected_facts": [
+        "14 calendar days before the first day of absence",
+        "10 consecutive working days or more require 30 calendar days notice",
+        "HR portal"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 3 BOOKING AND NOTICE: 'Requests must be submitted through the HR portal at least 14 calendar days before the first day of absence. Absences of 10 consecutive working days or more require 30 calendar days notice.'",
+      "origin": "repair",
+      "seed_chunk": "leave_policy#2"
+    },
+    {
+      "case_id": "ans-008",
+      "kind": "answerable",
+      "question": "How much sick leave am I entitled to, and what paperwork do I need if I'm off for a few days versus a longer stretch?",
+      "expected_facts": [
+        "10 days of fully paid sick leave per leave year",
+        "self-certification form for absences of 1 to 3 days",
+        "medical certificate from the 4th consecutive day of absence"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 5 SICK LEAVE: 'Employees receive up to 10 days of fully paid sick leave per leave year. A self-certification form is required for absences of 1 to 3 days. A medical certificate is required from the 4th consecutive day of absence.'",
+      "origin": "repair",
+      "seed_chunk": "leave_policy#2"
+    },
+    {
+      "case_id": "ans-009",
+      "kind": "answerable",
+      "question": "How much do I get reimbursed per mile if I use my own car for work trips?",
+      "expected_facts": [
+        "0.45 per mile for the first 10,000 miles in a tax year",
+        "0.25 per mile thereafter"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Mileage in a private vehicle is reimbursed at 0.45 per mile for the first 10,000 miles in a tax year and 0.25 per mile thereafter.",
+      "origin": "model",
+      "seed_chunk": "pay_and_benefits#3"
+    },
+    {
+      "case_id": "ans-010",
+      "kind": "answerable",
+      "question": "What happens if I leave the company shortly after completing an expensive training course?",
+      "expected_facts": [
+        "within 12 months of completing a course costing more than 2,000",
+        "repay 50 per cent of the cost"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Staff who leave within 12 months of completing a course costing more than 2,000 repay 50 per cent of the cost.",
+      "origin": "model",
+      "seed_chunk": "pay_and_benefits#3"
+    },
+    {
+      "case_id": "ans-011",
+      "kind": "answerable",
+      "question": "Can I use my company laptop for personal stuff, like streaming or personal email?",
+      "expected_facts": [
+        "business use",
+        "incidental personal use is permitted",
+        "Company data must not be stored on personal cloud accounts or removable media"
+      ],
+      "expected_source_docs": [
+        "workplace_conduct.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 3 'ACCEPTABLE USE OF IT' states company devices are for business use with incidental personal use permitted, and prohibits storing company data on personal cloud accounts or removable media.",
+      "origin": "model",
+      "seed_chunk": "workplace_conduct#2"
+    },
+    {
+      "case_id": "ans-012",
+      "kind": "answerable",
+      "question": "A supplier offered me a gift worth about 300 pounds — can I accept it?",
+      "expected_facts": [
+        "gifts above 250 may not be accepted",
+        "Gifts and hospitality with a value above 50 must be declared in the gifts register"
+      ],
+      "expected_source_docs": [
+        "workplace_conduct.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "",
+      "rationale": "Section 4 'CODE OF CONDUCT' states gifts above 250 may not be accepted, and those above 50 must be declared in the gifts register.",
+      "origin": "model",
+      "seed_chunk": "workplace_conduct#2"
+    },
+    {
+      "case_id": "oos-013",
+      "kind": "out_of_scope",
+      "question": "Can you tell me about shipboard rotation entitlement or sea-service certificate revalidation?",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Shipboard rotation entitlement or sea-service certificate revalidation' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "oos-014",
+      "kind": "out_of_scope",
+      "question": "What is the policy on individual case advice such as whether a specific leave request will be approved?",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Individual case advice such as whether a specific leave request will be approved' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "oos-015",
+      "kind": "out_of_scope",
+      "question": "I need guidance on disciplinary, grievance, or redundancy procedures - what do your documents say?",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Disciplinary, grievance, or redundancy procedures' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "oos-016",
+      "kind": "out_of_scope",
+      "question": "Give me a recommendation about queries from agency contractors or interns.",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Queries from agency contractors or interns' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "oos-017",
+      "kind": "out_of_scope",
+      "question": "Can you tell me about recruitment, hiring, or contract negotiation?",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Recruitment, hiring, or contract negotiation' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "oos-018",
+      "kind": "out_of_scope",
+      "question": "What is the policy on any decision-making on behalf of a line manager?",
+      "expected_facts": [],
+      "expected_source_docs": [],
+      "should_refuse": true,
+      "edge_type": "",
+      "rationale": "'Any decision-making on behalf of a line manager' is on the must-refuse list for this agent.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "edge-019",
+      "kind": "edge",
+      "question": "What about meridian maritime?",
+      "expected_facts": [
+        "meridian maritime"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "ambiguous",
+      "rationale": "Deliberately underspecified phrasing.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "edge-020",
+      "kind": "edge",
+      "question": "What about above receive?",
+      "expected_facts": [
+        "above receive"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "ambiguous",
+      "rationale": "Deliberately underspecified phrasing.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "edge-021",
+      "kind": "edge",
+      "question": "How do meridian maritime service and above receive overtime relate to each other?",
+      "expected_facts": [
+        "meridian maritime service",
+        "above receive overtime"
+      ],
+      "expected_source_docs": [
+        "leave_policy.pdf",
+        "pay_and_benefits.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "multi_document",
+      "rationale": "Requires evidence from two different documents.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    },
+    {
+      "case_id": "edge-022",
+      "kind": "edge",
+      "question": "How do above receive overtime and meridian maritime service relate to each other?",
+      "expected_facts": [
+        "above receive overtime",
+        "meridian maritime service"
+      ],
+      "expected_source_docs": [
+        "pay_and_benefits.pdf",
+        "workplace_conduct.pdf"
+      ],
+      "should_refuse": false,
+      "edge_type": "multi_document",
+      "rationale": "Requires evidence from two different documents.",
+      "origin": "fallback",
+      "seed_chunk": ""
+    }
+  ]
+}

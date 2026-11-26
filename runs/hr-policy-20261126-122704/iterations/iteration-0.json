@@ -1,0 +1,598 @@
+{
+  "scorecard": {
+    "iteration": 0,
+    "definition_fingerprint": "6aa5d40ec3a5",
+    "total": 22,
+    "passed": 17,
+    "score": 0.889,
+    "by_kind": {
+      "answerable": {
+        "total": 12,
+        "passed": 9,
+        "score": 0.911
+      },
+      "out_of_scope": {
+        "total": 6,
+        "passed": 6,
+        "score": 1.0
+      },
+      "edge": {
+        "total": 4,
+        "passed": 2,
+        "score": 0.658
+      }
+    },
+    "failures_by_category": {
+      "prompt_defect": 3,
+      "hallucination": 1,
+      "wrong_refusal": 1
+    },
+    "judge_disagreements": 0
+  },
+  "cases": [
+    {
+      "case_id": "ans-001",
+      "kind": "answerable",
+      "question": "How much annual leave do I get as a full-time shore staff member, and how does it build up each month?",
+      "answer": "Full-time shore staff accrue 25 days of paid annual leave per leave year (1 April to 31 March), in addition to 8 public holidays. Leave accrues monthly at 2.08 days per completed calendar month of service. If you have 5 or more continuous years of service, your entitlement rises to 28 days.",
+      "refused": false,
+      "citations": [
+        "leave_policy.pdf#1"
+      ],
+      "retrieved_chunks": [
+        "leave_policy#1",
+        "pay_and_benefits#4",
+        "leave_policy#4",
+        "workplace_conduct#1",
+        "pay_and_benefits#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.982,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.995,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-002",
+      "kind": "answerable",
+      "question": "How much leave do I get if I've been with the company for over five years?",
+      "answer": "Staff with 5 or more continuous years of service accrue 28 days of paid annual leave per leave year, in addition to 8 public holidays. The leave year runs from 1 April to 31 March, and leave accrues monthly at 2.08 days per completed calendar month of service.",
+      "refused": false,
+      "citations": [
+        "leave_policy.pdf#1"
+      ],
+      "retrieved_chunks": [
+        "workplace_conduct#2",
+        "leave_policy#4",
+        "leave_policy#1",
+        "workplace_conduct#1",
+        "pay_and_benefits#3"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-003",
+      "kind": "answerable",
+      "question": "What do the documents say about minimum cent pensionable meridian?",
+      "answer": "Meridian contributes a minimum of 8 per cent of pensionable pay to the defined contribution pension scheme. Employees contributing 7 per cent or more receive an enhanced employer contribution of 10 per cent.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#2",
+        "workplace_conduct#1",
+        "pay_and_benefits#1",
+        "leave_policy#1",
+        "leave_policy#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 0.5,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.7,
+      "passed": false,
+      "failure_category": "prompt_defect",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-004",
+      "kind": "answerable",
+      "question": "What do the documents say about meridian give week notice?",
+      "answer": "Meridian gives 4 weeks notice, rising to 1 week per completed year of service, to a maximum of 12 weeks.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#2",
+        "pay_and_benefits.pdf#3"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#2",
+        "pay_and_benefits#3",
+        "workplace_conduct#1",
+        "leave_policy#1",
+        "leave_policy#3"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-005",
+      "kind": "answerable",
+      "question": "How many days a week do I need to be in the office, and what are the core hours I have to be contactable?",
+      "answer": "You must attend your contractual office location for a minimum of 3 days per week. Core hours, during which you must be contactable, are 10:00 to 16:00 local time.",
+      "refused": false,
+      "citations": [
+        "workplace_conduct.pdf#1"
+      ],
+      "retrieved_chunks": [
+        "workplace_conduct#1",
+        "pay_and_benefits#3",
+        "pay_and_benefits#1",
+        "leave_policy#3",
+        "leave_policy#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-006",
+      "kind": "answerable",
+      "question": "What's the home working equipment allowance, who can claim it, and what does it cover?",
+      "answer": "A one-off home working equipment allowance of 350 is available to staff who have completed probation. It covers a desk, chair, monitor and peripherals. Equipment remains Meridian's property and must be returned on termination.",
+      "refused": false,
+      "citations": [
+        "workplace_conduct.pdf#1"
+      ],
+      "retrieved_chunks": [
+        "workplace_conduct#1",
+        "pay_and_benefits#4",
+        "workplace_conduct#3",
+        "pay_and_benefits#1",
+        "leave_policy#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-007",
+      "kind": "answerable",
+      "question": "How far in advance do I need to book my leave, and is there a longer notice period for extended breaks?",
+      "answer": "Standard leave requests must be submitted through the HR portal at least 14 calendar days before the first day of absence. For extended breaks of 10 consecutive working days or more, the notice period increases to 30 calendar days.",
+      "refused": false,
+      "citations": [
+        "leave_policy.pdf#1",
+        "leave_policy.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#2",
+        "leave_policy#1",
+        "leave_policy#2",
+        "pay_and_benefits#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.933,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.98,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-008",
+      "kind": "answerable",
+      "question": "How much sick leave am I entitled to, and what paperwork do I need if I'm off for a few days versus a longer stretch?",
+      "answer": "You are entitled to up to 10 days of fully paid sick leave per leave year. Paperwork depends on length:\n- 1 to 3 days: a self-certification form.\n- From the 4th consecutive day: a medical certificate.\n\nYou must report the absence to your line manager by 09:30 on the first day. After 10 days, statutory sick pay applies for a maximum of 28 weeks.",
+      "refused": false,
+      "citations": [
+        "leave_policy.pdf#2",
+        "leave_policy.pdf#3"
+      ],
+      "retrieved_chunks": [
+        "leave_policy#3",
+        "leave_policy#2",
+        "pay_and_benefits#1",
+        "pay_and_benefits#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.933,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.98,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-009",
+      "kind": "answerable",
+      "question": "How much do I get reimbursed per mile if I use my own car for work trips?",
+      "answer": "Mileage in a private vehicle is reimbursed at £0.45 per mile for the first 10,000 miles in a tax year, and £0.25 per mile thereafter.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#3"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#3",
+        "pay_and_benefits#4",
+        "workplace_conduct#1",
+        "workplace_conduct#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-010",
+      "kind": "answerable",
+      "question": "What happens if I leave the company shortly after completing an expensive training course?",
+      "answer": "If you leave within 12 months of completing a training course that cost more than 2,000, you must repay 50% of the course cost.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#3"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#3",
+        "pay_and_benefits#4",
+        "leave_policy#4",
+        "leave_policy#3",
+        "workplace_conduct#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-011",
+      "kind": "answerable",
+      "question": "Can I use my company laptop for personal stuff, like streaming or personal email?",
+      "answer": "Company devices are for business use; incidental personal use is permitted. The policy does not define what counts as 'incidental,' so it does not specifically confirm or prohibit streaming or personal email. You should check with your line manager or IT if you're unsure whether a particular use is within scope.",
+      "refused": false,
+      "citations": [
+        "workplace_conduct.pdf#1",
+        "workplace_conduct.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "workplace_conduct#2",
+        "workplace_conduct#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.364,
+      "correct": 0.667,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.609,
+      "passed": false,
+      "failure_category": "hallucination",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "ans-012",
+      "kind": "answerable",
+      "question": "A supplier offered me a gift worth about 300 pounds — can I accept it?",
+      "answer": "No. Gifts above £250 may not be accepted. You should decline the gift.",
+      "refused": false,
+      "citations": [
+        "workplace_conduct.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "workplace_conduct#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.9,
+      "correct": 0.5,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.67,
+      "passed": false,
+      "failure_category": "prompt_defect",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-013",
+      "kind": "out_of_scope",
+      "question": "Can you tell me about shipboard rotation entitlement or sea-service certificate revalidation?",
+      "answer": "I can't answer that from the documents I've been given. I can help with shore staff policies on annual leave, sick leave, pay dates, overtime, hybrid working, home working equipment, and acceptable use of IT.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "leave_policy#3",
+        "leave_policy#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-014",
+      "kind": "out_of_scope",
+      "question": "What is the policy on individual case advice such as whether a specific leave request will be approved?",
+      "answer": "I can't answer that from the documents I've been given. I can help with general policy questions such as leave entitlements, booking notice periods, or carry-over rules.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "leave_policy#1",
+        "workplace_conduct#1",
+        "leave_policy#2",
+        "pay_and_benefits#3",
+        "pay_and_benefits#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-015",
+      "kind": "out_of_scope",
+      "question": "I need guidance on disciplinary, grievance, or redundancy procedures - what do your documents say?",
+      "answer": "I can't answer that from the documents I've been given. I can help with questions about annual leave, sick leave, pay dates, overtime, hybrid working, home working equipment, or acceptable use of IT for shore-based staff.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "workplace_conduct#3",
+        "workplace_conduct#2",
+        "pay_and_benefits#1",
+        "leave_policy#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-016",
+      "kind": "out_of_scope",
+      "question": "Give me a recommendation about queries from agency contractors or interns.",
+      "answer": "I can't answer that from the documents I've been given. I can help with questions about annual leave, sick leave, pay dates, overtime, hybrid working, home working equipment, or acceptable use of IT for shore-based employees on permanent or fixed-term contracts of six months or longer.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "leave_policy#1",
+        "pay_and_benefits#2",
+        "pay_and_benefits#3"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-017",
+      "kind": "out_of_scope",
+      "question": "Can you tell me about recruitment, hiring, or contract negotiation?",
+      "answer": "I can't answer that from the documents I've been given. I can help with questions about annual leave, sick leave, pay dates, overtime, hybrid working, home working equipment, or acceptable use of IT for shore-based staff.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "leave_policy#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "oos-018",
+      "kind": "out_of_scope",
+      "question": "What is the policy on any decision-making on behalf of a line manager?",
+      "answer": "I can't answer that from the documents I've been given. I can help with general policy information on leave, pay, overtime, hybrid working, or IT use for shore-based staff.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "workplace_conduct#4",
+        "leave_policy#1",
+        "workplace_conduct#3",
+        "leave_policy#3",
+        "pay_and_benefits#1"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 1.0,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "edge-019",
+      "kind": "edge",
+      "question": "What about meridian maritime?",
+      "answer": "I can't answer that from the documents I've been given. The question is too broad to map to a specific policy. I can help with annual leave, sick leave, pay dates, overtime, hybrid working, home working equipment, or acceptable use of IT for shore staff.",
+      "refused": true,
+      "citations": [],
+      "retrieved_chunks": [
+        "leave_policy#1",
+        "workplace_conduct#1",
+        "pay_and_benefits#1",
+        "pay_and_benefits#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 1.0,
+      "correct": 0.0,
+      "refusal_correct": false,
+      "contract_ok": true,
+      "score": 0.0,
+      "passed": false,
+      "failure_category": "wrong_refusal",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "edge-020",
+      "kind": "edge",
+      "question": "What about above receive?",
+      "answer": "Grades 6 and above receive no overtime payment. Time off in lieu may be agreed instead.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#1"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#2",
+        "pay_and_benefits#1",
+        "leave_policy#2",
+        "workplace_conduct#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.956,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.987,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "edge-021",
+      "kind": "edge",
+      "question": "How do meridian maritime service and above receive overtime relate to each other?",
+      "answer": "Assuming you're asking how grades 6 and above handle overtime: they receive no overtime payment. Time off in lieu may be agreed instead.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#1",
+        "pay_and_benefits.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#1",
+        "pay_and_benefits#2",
+        "leave_policy#1",
+        "workplace_conduct#1",
+        "leave_policy#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.867,
+      "correct": 0.5,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.66,
+      "passed": false,
+      "failure_category": "prompt_defect",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    },
+    {
+      "case_id": "edge-022",
+      "kind": "edge",
+      "question": "How do above receive overtime and meridian maritime service relate to each other?",
+      "answer": "Grades 6 and above at Meridian Maritime Services receive no overtime payment. Time off in lieu may be agreed instead. Overtime pay (1.5× basic rate for hours beyond 40/week; 2.0× on public holidays) applies only to grades 1–5, must be pre-approved by a line manager, and claimed within 30 days.",
+      "refused": false,
+      "citations": [
+        "pay_and_benefits.pdf#1",
+        "pay_and_benefits.pdf#2"
+      ],
+      "retrieved_chunks": [
+        "pay_and_benefits#1",
+        "pay_and_benefits#2",
+        "leave_policy#1",
+        "workplace_conduct#1",
+        "leave_policy#2"
+      ],
+      "gold_chunk_retrieved": true,
+      "grounded": 0.954,
+      "correct": 1.0,
+      "refusal_correct": true,
+      "contract_ok": true,
+      "score": 0.986,
+      "passed": true,
+      "failure_category": "",
+      "judge_notes": "",
+      "judge_agreed_with_checks": true
+    }
+  ]
+}

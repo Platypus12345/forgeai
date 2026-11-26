@@ -1,0 +1,256 @@
+{
+  "brief": "I need an assistant that answers HR policy questions for our shore staff. People\nconstantly ask the HR team the same things about annual leave, sick leave, pay\ndates, overtime, notice periods and the hybrid working rules, and we want them to\nself-serve. It should also be able to tell someone their shipboard rotation\nentitlement and how many sea-service days they need for their next certificate\nrevalidation. Keep answers short and plain, and it must never give anyone advice\nabout their individual case or make a decision for a manager.",
+  "corpus_dir": "demos\\hr_policy\\docs",
+  "model": "openai:qwen/qwen3.8-27b",
+  "provider": "openai",
+  "finished_utc": "2026-11-26T13:35:01+00:00",
+  "wall_seconds": 4076.8,
+  "stop_reason": "pass threshold reached (0.889 >= 0.85)",
+  "budget": {
+    "calls": 181,
+    "tokens": 202109,
+    "seconds": 4076.8,
+    "json_repairs": 11,
+    "deterministic_fallbacks": 8,
+    "api_errors": 64,
+    "api_error_samples": [
+      "429 from model endpoint: {\"error\":{\"message\":\"Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m8ae5p65e538bpqsjz0ac8ax` service tier `on_demand` on output tokens per minute (OTP",
+      "429 from model endpoint: {\"error\":{\"message\":\"Request too large for model `qwen/qwen3.8-27b` in organization `org_01m8ae5p65e538bpqsjz0ac8ax` service tier `on_demand` on output tokens per minute (OTPM"
+    ],
+    "output_truncations": 18,
+    "token_budget": 900000,
+    "latency_budget_s": 18000,
+    "per_stage": {
+      "intake.questions": {
+        "calls": 6,
+        "tokens": 7059,
+        "seconds": 6.34,
+        "repairs": 1,
+        "fallbacks": 1,
+        "api_errors": 2,
+        "truncations": 2
+      },
+      "intake.auto_answer": {
+        "calls": 3,
+        "tokens": 5846,
+        "seconds": 5.56,
+        "repairs": 0,
+        "fallbacks": 0,
+        "api_errors": 1,
+        "truncations": 1
+      },
+      "intake.requirements": {
+        "calls": 3,
+        "tokens": 8467,
+        "seconds": 5.96,
+        "repairs": 0,
+        "fallbacks": 0,
+        "api_errors": 1,
+        "truncations": 1
+      },
+      "groundability": {
+        "calls": 10,
+        "tokens": 11674,
+        "seconds": 6.04,
+        "repairs": 0,
+        "fallbacks": 0,
+        "api_errors": 3,
+        "truncations": 0
+      },
+      "generator.tools": {
+        "calls": 5,
+        "tokens": 4663,
+        "seconds": 2.79,
+        "repairs": 1,
+        "fallbacks": 0,
+        "api_errors": 3,
+        "truncations": 1
+      },
+      "generator.prompt": {
+        "calls": 12,
+        "tokens": 6271,
+        "seconds": 7.76,
+        "repairs": 3,
+        "fallbacks": 3,
+        "api_errors": 3,
+        "truncations": 3
+      },
+      "evalgen.answerable": {
+        "calls": 21,
+        "tokens": 20077,
+        "seconds": 18.61,
+        "repairs": 2,
+        "fallbacks": 1,
+        "api_errors": 9,
+        "truncations": 4
+      },
+      "evalgen.refusal": {
+        "calls": 6,
+        "tokens": 3703,
+        "seconds": 4.42,
+        "repairs": 1,
+        "fallbacks": 1,
+        "api_errors": 2,
+        "truncations": 2
+      },
+      "evalgen.edge.ambiguous": {
+        "calls": 6,
+        "tokens": 5193,
+        "seconds": 4.77,
+        "repairs": 1,
+        "fallbacks": 1,
+        "api_errors": 2,
+        "truncations": 2
+      },
+      "evalgen.edge.multi_document": {
+        "calls": 6,
+        "tokens": 7135,
+        "seconds": 4.74,
+        "repairs": 1,
+        "fallbacks": 1,
+        "api_errors": 2,
+        "truncations": 2
+      },
+      "agent.answer": {
+        "calls": 65,
+        "tokens": 99699,
+        "seconds": 31.86,
+        "repairs": 0,
+        "fallbacks": 0,
+        "api_errors": 25,
+        "truncations": 0
+      },
+      "judge": {
+        "calls": 38,
+        "tokens": 22322,
+        "seconds": 16.43,
+        "repairs": 1,
+        "fallbacks": 0,
+        "api_errors": 11,
+        "truncations": 0
+      }
+    }
+  },
+  "scorecards": [
+    {
+      "iteration": 0,
+      "definition_fingerprint": "6aa5d40ec3a5",
+      "total": 22,
+      "passed": 17,
+      "score": 0.889,
+      "by_kind": {
+        "answerable": {
+          "total": 12,
+          "passed": 9,
+          "score": 0.911
+        },
+        "out_of_scope": {
+          "total": 6,
+          "passed": 6,
+          "score": 1.0
+        },
+        "edge": {
+          "total": 4,
+          "passed": 2,
+          "score": 0.658
+        }
+      },
+      "failures_by_category": {
+        "prompt_defect": 3,
+        "hallucination": 1,
+        "wrong_refusal": 1
+      },
+      "judge_disagreements": 0
+    }
+  ],
+  "tournament": [
+    {
+      "style": "rules",
+      "agent_id": "shore-staff-policy-guide-terse-rules",
+      "fingerprint": "6aa5d40ec3a5",
+      "subset_size": 6,
+      "score": 0.829,
+      "passed": 5,
+      "by_kind": {
+        "answerable": {
+          "total": 2,
+          "passed": 2,
+          "score": 0.994
+        },
+        "edge": {
+          "total": 2,
+          "passed": 1,
+          "score": 0.493
+        },
+        "out_of_scope": {
+          "total": 2,
+          "passed": 2,
+          "score": 1.0
+        }
+      },
+      "winner": false
+    },
+    {
+      "style": "explanatory",
+      "agent_id": "shore-staff-policy-guide-explanatory",
+      "fingerprint": "6aa5d40ec3a5",
+      "subset_size": 6,
+      "score": 0.83,
+      "passed": 5,
+      "by_kind": {
+        "answerable": {
+          "total": 2,
+          "passed": 2,
+          "score": 0.998
+        },
+        "edge": {
+          "total": 2,
+          "passed": 1,
+          "score": 0.493
+        },
+        "out_of_scope": {
+          "total": 2,
+          "passed": 2,
+          "score": 1.0
+        }
+      },
+      "winner": true
+    },
+    {
+      "style": "procedural",
+      "agent_id": "shore-staff-policy-guide-procedural",
+      "fingerprint": "6aa5d40ec3a5",
+      "subset_size": 6,
+      "score": 0.829,
+      "passed": 5,
+      "by_kind": {
+        "answerable": {
+          "total": 2,
+          "passed": 2,
+          "score": 0.994
+        },
+        "edge": {
+          "total": 2,
+          "passed": 1,
+          "score": 0.493
+        },
+        "out_of_scope": {
+          "total": 2,
+          "passed": 2,
+          "score": 1.0
+        }
+      },
+      "winner": false
+    }
+  ],
+  "judge_audit": {
+    "ran": true,
+    "cases_sampled": 3,
+    "recall_on_known_good": 1.0,
+    "specificity_on_known_bad": 1.0,
+    "verbosity_resistance": 1.0,
+    "verbosity_bias_detected": false,
+    "verdict": "trustworthy"
+  },
+  "iterations": []
+}
