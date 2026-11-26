@@ -327,7 +327,7 @@ def run_evaluation(
 
 
 def audit_judge(
-    eval_set: EvalSet, client: LLMClient, *, seed: int = 0, sample: int = 6
+    eval_set: EvalSet, client: LLMClient, *, seed: int = 0, sample: int = 3
 ) -> dict[str, Any]:
     """Score the judge against planted answers whose grade we already know.
 

@@ -149,6 +149,24 @@ class TestRetrieval:
         names = [h.chunk.doc_name for h in hits]
         assert len(names) == len(set(names)), "per_doc_cap=1 must not repeat a document"
 
+    def test_evidence_bundle_returns_several_readable_passages(self):
+        """The groundability guard must judge on more than one truncated snippet.
+
+        Judging a topic on a single 160-character snippet wrongly marked
+        "Annual Leave Entitlement" unsupported on the HR corpus, because the
+        best lexical match was the policy's title page.
+        """
+        r = self._retriever()
+        score, bundle = r.evidence_bundle("annual leave entitlement", k=3, chars=700)
+        assert score > 0
+        assert bundle.count("[") >= 2, "expected several cited passages"
+        assert len(bundle) > 400, "passages must be long enough to judge"
+
+    def test_evidence_bundle_empty_for_absent_topic(self):
+        r = self._retriever()
+        score, bundle = r.evidence_bundle("quantum chromodynamics lattice gauge")
+        assert score == 0.0 and bundle == ""
+
     def test_evidence_score_discriminates(self):
         r = self._retriever()
         good, _ = r.evidence_score("annual leave entitlement")

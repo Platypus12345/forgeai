@@ -61,12 +61,28 @@ Every stage uses one model. Set it in `.env`:
 
 | Provider | `FORGEAI_BASE_URL` | Example `FORGEAI_MODEL` |
 |---|---|---|
-| Groq | `https://api.groq.com/openai/v1` | `llama-3.1-8b-instant` |
+| Groq | `https://api.groq.com/openai/v1` | `openai/gpt-oss-20b` |
 | Together | `https://api.together.xyz/v1` | `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo` |
 | OpenRouter | `https://openrouter.ai/api/v1` | `qwen/qwen-2.5-7b-instruct` |
 | Ollama (local) | `http://localhost:11434` | `qwen2.5:7b-instruct` |
 
-Any OpenAI-compatible `/chat/completions` endpoint works.
+Any OpenAI-compatible `/chat/completions` endpoint works. The committed demo
+runs were produced on **`openai/gpt-oss-20b` via Groq** - a small open-weights
+model, which is the regime the brief asks for.
+
+**Rate limiting.** Free tiers meter tokens per minute (Groq allowed 8,000 TPM
+while this was built). `FORGEAI_TPM` enforces that ceiling client-side with a
+sliding-window throttle, so the factory paces itself instead of collecting 429s
+and burning retries; when a 429 does arrive, the provider's own "try again in
+Xs" hint is honoured rather than guessed at. Set `FORGEAI_TPM=0` for a local
+Ollama or a paid tier. At 8,000 TPM a full demo run takes roughly 30-50 minutes,
+nearly all of it spent waiting on the throttle.
+
+Note that open reasoning models such as `gpt-oss` spend hidden reasoning tokens
+out of the same output budget. The client sends `reasoning_effort: "low"` to
+those models, detects replies cut off at the limit (`finish_reason: "length"`)
+and retries them with a larger budget, because a truncated reply is almost
+never parseable JSON.
 
 **If no model is configured**, the factory still runs end to end on its
 deterministic fallbacks and the produced agent answers extractively. This is how

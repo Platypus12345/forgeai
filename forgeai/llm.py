@@ -42,6 +42,8 @@ class CallRecord:
     seconds: float
     repaired: bool = False
     fell_back: bool = False
+    api_error: str = ""      # transport/HTTP failure, after retries were spent
+    truncated: bool = False  # provider stopped us at the output-token limit
 
 
 @dataclass
@@ -68,6 +70,23 @@ class Ledger:
     def fallbacks(self) -> int:
         return sum(1 for c in self.calls if c.fell_back)
 
+    @property
+    def api_errors(self) -> int:
+        return sum(1 for c in self.calls if c.api_error)
+
+    @property
+    def truncations(self) -> int:
+        return sum(1 for c in self.calls if c.truncated)
+
+    def error_samples(self, limit: int = 3) -> list[str]:
+        seen: list[str] = []
+        for c in self.calls:
+            if c.api_error and c.api_error not in seen:
+                seen.append(c.api_error)
+            if len(seen) >= limit:
+                break
+        return seen
+
     def record(self, rec: CallRecord) -> None:
         self.calls.append(rec)
 
@@ -93,13 +112,16 @@ class Ledger:
         for c in self.calls:
             s = out.setdefault(
                 c.stage,
-                {"calls": 0, "tokens": 0, "seconds": 0.0, "repairs": 0, "fallbacks": 0},
+                {"calls": 0, "tokens": 0, "seconds": 0.0, "repairs": 0,
+                 "fallbacks": 0, "api_errors": 0, "truncations": 0},
             )
             s["calls"] += 1
             s["tokens"] += c.prompt_tokens + c.output_tokens
             s["seconds"] += c.seconds
             s["repairs"] += int(c.repaired)
             s["fallbacks"] += int(c.fell_back)
+            s["api_errors"] += int(bool(c.api_error))
+            s["truncations"] += int(c.truncated)
         for s in out.values():
             s["seconds"] = round(s["seconds"], 2)
         return out
@@ -111,6 +133,9 @@ class Ledger:
             "seconds": round(self.seconds, 1),
             "json_repairs": self.repairs,
             "deterministic_fallbacks": self.fallbacks,
+            "api_errors": self.api_errors,
+            "api_error_samples": self.error_samples(),
+            "output_truncations": self.truncations,
             "token_budget": self.budget.max_tokens,
             "latency_budget_s": self.budget.max_seconds,
             "per_stage": self.by_stage(),
@@ -190,6 +215,60 @@ def _soften(text: str) -> str:
 # --------------------------------------------------------------------------
 
 
+
+class RateLimiter:
+    """Client-side sliding-window token throttle.
+
+    Free model endpoints meter tokens per minute (Groq gives 8,000 TPM on the
+    tier this was developed against). Reacting to 429s wastes a round trip and
+    a retry each time; it is cheaper and far faster to simply not exceed the
+    limit. This tracks the tokens actually spent in the trailing 60 seconds and
+    sleeps just long enough before a call that would breach the budget.
+
+    `tokens_per_minute=0` disables it, which is what a local Ollama wants.
+    """
+
+    def __init__(self, tokens_per_minute: int, *, safety: float = 0.88,
+                 verbose: bool = False):
+        self.limit = max(0, int(tokens_per_minute))
+        self.safety = safety
+        self.verbose = verbose
+        self._events: list[tuple[float, int]] = []
+
+    @property
+    def budget(self) -> float:
+        return self.limit * self.safety
+
+    def _prune(self, now: float) -> None:
+        cutoff = now - 60.0
+        self._events = [(t, n) for t, n in self._events if t > cutoff]
+
+    def acquire(self, estimated: int) -> float:
+        """Block until `estimated` tokens fit in the window. Returns seconds slept."""
+        if not self.limit:
+            return 0.0
+        slept = 0.0
+        while True:
+            now = time.time()
+            self._prune(now)
+            used = sum(n for _, n in self._events)
+            if used + estimated <= self.budget or not self._events:
+                return slept
+            oldest = self._events[0][0]
+            wait = max(0.25, 60.0 - (now - oldest) + 0.2)
+            if self.verbose:
+                print(
+                    f"  [llm] throttling {wait:.1f}s "
+                    f"({used} tokens used in the last minute, need {estimated})"
+                )
+            time.sleep(wait)
+            slept += wait
+
+    def record(self, actual: int) -> None:
+        if self.limit:
+            self._events.append((time.time(), max(0, int(actual))))
+
+
 class LLMClient:
     """Chat + structured-output wrapper over an OpenAI-compatible or Ollama endpoint."""
 
@@ -198,6 +277,7 @@ class LLMClient:
         self.ledger = ledger
         self.verbose = verbose
         self._session = requests.Session()
+        self.limiter = RateLimiter(cfg.tokens_per_minute, verbose=verbose)
 
     # -- plumbing ---------------------------------------------------------
     @property
@@ -218,7 +298,10 @@ class LLMClient:
             )
         return resp.json()
 
-    def _call_raw(self, messages: list[dict], *, temperature: float, max_tokens: int) -> str:
+    def _call_raw(
+        self, messages: list[dict], *, temperature: float, max_tokens: int
+    ) -> tuple[str, str, int]:
+        """Returns (text, finish_reason, tokens_used). "length" means truncated."""
         if self.cfg.provider == "ollama":
             data = self._post(
                 self.cfg.base_url.rstrip("/") + "/api/chat",
@@ -229,17 +312,29 @@ class LLMClient:
                     "options": {"temperature": temperature, "num_predict": max_tokens},
                 },
             )
-            return (data.get("message") or {}).get("content", "")
-        data = self._post(
-            self.cfg.base_url.rstrip("/") + "/chat/completions",
-            {
-                "model": self.cfg.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            text = (data.get("message") or {}).get("content", "")
+            used = int(data.get("prompt_eval_count") or 0) + int(data.get("eval_count") or 0)
+            return text, ("length" if data.get("done_reason") == "length" else "stop"), used
+
+        payload = {
+            "model": self.cfg.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        # Open reasoning models (gpt-oss and friends) spend hidden reasoning
+        # tokens out of the same output budget. Asking for low effort keeps the
+        # budget for the answer we actually parse. Ignored by other providers.
+        if "gpt-oss" in self.cfg.model or "qwen3" in self.cfg.model:
+            payload["reasoning_effort"] = "low"
+        data = self._post(self.cfg.base_url.rstrip("/") + "/chat/completions", payload)
+        choice = data["choices"][0]
+        used = int((data.get("usage") or {}).get("total_tokens") or 0)
+        return (
+            (choice["message"].get("content") or ""),
+            (choice.get("finish_reason") or "stop"),
+            used,
         )
-        return data["choices"][0]["message"].get("content") or ""
 
     # -- public API -------------------------------------------------------
     def chat(
@@ -265,31 +360,65 @@ class LLMClient:
         max_tokens = max_tokens or self.cfg.max_output_tokens
 
         last_err: Exception | None = None
+        budget_tokens = max_tokens
         for attempt in range(self.cfg.max_retries):
+            prompt_estimate = estimate_tokens(system or "") + estimate_tokens(prompt)
+            # Reserve the output allowance too: the meter counts what comes back.
+            self.limiter.acquire(prompt_estimate + min(budget_tokens, 1200))
             t0 = time.time()
             try:
-                text = self._call_raw(
-                    messages, temperature=temperature, max_tokens=max_tokens
+                text, finish, used = self._call_raw(
+                    messages, temperature=temperature, max_tokens=budget_tokens
                 )
+                truncated = finish == "length"
+                self.limiter.record(used or (prompt_estimate + estimate_tokens(text)))
+                # Prefer the provider's own accounting over our estimate.
+                if used:
+                    out_tokens = max(0, used - prompt_estimate)
+                else:
+                    out_tokens = estimate_tokens(text)
                 self.ledger.record(
                     CallRecord(
                         stage,
-                        estimate_tokens(system or "") + estimate_tokens(prompt),
-                        estimate_tokens(text),
+                        prompt_estimate,
+                        out_tokens,
                         time.time() - t0,
+                        truncated=truncated,
                     )
                 )
+                # A reply cut off at the token limit is almost never parseable.
+                # Retry once with a bigger budget rather than sending a
+                # half-written JSON object down the pipeline.
+                if truncated and attempt < self.cfg.max_retries - 1:
+                    budget_tokens = min(int(budget_tokens * 1.8), 8000)
+                    if self.verbose:
+                        print(
+                            f"  [llm] {stage} output truncated; retrying with "
+                            f"max_tokens={budget_tokens}"
+                        )
+                    continue
                 return text
             except Exception as exc:  # network blip, rate limit, 5xx
                 last_err = exc
                 self.ledger.record(
-                    CallRecord(stage, estimate_tokens(prompt), 0, time.time() - t0)
+                    CallRecord(
+                        stage, estimate_tokens(prompt), 0, time.time() - t0,
+                        api_error=str(exc)[:200],
+                    )
                 )
                 if self.verbose:
                     print(f"  [llm] {stage} attempt {attempt + 1} failed: {exc}")
-                time.sleep(min(2 ** attempt, 8))
+                # Rate limits need real backoff, and the provider usually says
+                # exactly how long to wait - believe it rather than guessing.
+                msg = str(exc)
+                wait = min(2 ** attempt, 15)
+                if "429" in msg or "rate" in msg.lower():
+                    hint = re.search(r"try again in ([\d.]+)s", msg)
+                    wait = (float(hint.group(1)) + 1.0) if hint else max(wait, 12)
+                    self.limiter.record(int(self.limiter.budget))  # assume full window
+                time.sleep(wait)
         if self.verbose:
-            print(f"  [llm] {stage} giving up: {last_err}")
+            print(f"  [llm] {stage} giving up after {self.cfg.max_retries}: {last_err}")
         return ""
 
     def structured(

@@ -157,13 +157,35 @@ class Retriever:
         return pool[: cfg.top_k]
 
     def evidence_score(self, text: str) -> tuple[float, str]:
-        """How well is `text` supported by the corpus? Used by the groundability guard."""
+        """Best single piece of evidence for `text`, as (score, short snippet)."""
         hits = self.index.search(text, top_k=3)
         if not hits:
             return 0.0, ""
         best = hits[0]
         snippet = " ".join(best.chunk.text.split())[:160]
         return best.score, f"{best.chunk.cite()}: {snippet}"
+
+    def evidence_bundle(
+        self, text: str, k: int = 3, chars: int = 700
+    ) -> tuple[float, str]:
+        """Several substantial passages for `text`, for the groundability guard.
+
+        The guard originally judged each topic on the single best chunk cut to
+        160 characters. On a real corpus that is not enough to judge anything:
+        "Annual Leave Entitlement" matched the title page of the leave policy,
+        the model correctly observed that the title page says nothing about
+        entitlement, and a core topic was wrongly marked unsupported and pushed
+        into the refusal policy. Showing the top `k` passages at a readable
+        length fixes the input to that judgement rather than the threshold.
+        """
+        hits = self.index.search(text, top_k=k)
+        if not hits:
+            return 0.0, ""
+        blocks = []
+        for hit in hits:
+            body = " ".join(hit.chunk.text.split())[:chars]
+            blocks.append(f"[{hit.chunk.cite()}] (match {hit.score:.2f})\n{body}")
+        return hits[0].score, "\n\n".join(blocks)
 
 
 def format_context(hits: list[Hit]) -> str:

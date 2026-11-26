@@ -233,7 +233,7 @@ class Factory:
             # then run the winner on the full set.
             subset = EvalSet(
                 agent_id=eval_set.agent_id,
-                cases=_stratified(eval_set, 9),
+                cases=_stratified(eval_set, 6),
                 generation_prompt_files=eval_set.generation_prompt_files,
             )
             best_score = -1.0

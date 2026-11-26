@@ -140,7 +140,7 @@ def _ask_questions(
         brief=brief,
         max_questions=cfg.max_clarifying_questions,
         corpus_summary=corpus_summary(docs, chunks),
-        corpus_preview=preview_corpus(docs, 900),
+        corpus_preview=preview_corpus(docs, 650),
     )
     value, _ = client.structured(
         prompt, stage="intake.questions", validate=validate, fallback=fallback
@@ -204,7 +204,7 @@ def _collect_answers(
         "intake_auto_answer",
         brief=brief,
         corpus_summary=corpus_summary(docs, chunks),
-        corpus_preview=preview_corpus(docs, 900),
+        corpus_preview=preview_corpus(docs, 650),
         questions_block=questions_block,
     )
     answers, _ = client.structured(
@@ -282,7 +282,7 @@ def run_intake(
         "intake_requirements",
         brief=brief,
         corpus_summary=corpus_summary(docs, chunks),
-        corpus_preview=preview_corpus(docs, 1200),
+        corpus_preview=preview_corpus(docs, 850),
         qa_block=qa_block or "(none)",
     )
     data, source = client.structured(

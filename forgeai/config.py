@@ -43,9 +43,11 @@ class ModelConfig:
     model: str = "llama-3.1-8b-instant"
     api_key: str = ""
     temperature: float = 0.2
-    max_output_tokens: int = 1400
+    max_output_tokens: int = 2600
     request_timeout: int = 120
-    max_retries: int = 3
+    max_retries: int = 4
+    # Provider token-per-minute ceiling, enforced client-side. 0 disables.
+    tokens_per_minute: int = 8000
 
     @classmethod
     def from_env(cls) -> "ModelConfig":
@@ -71,9 +73,14 @@ class ModelConfig:
             model=model or d_model,
             api_key=api_key,
             temperature=float(os.environ.get("FORGEAI_TEMPERATURE", "0.2")),
-            max_output_tokens=int(os.environ.get("FORGEAI_MAX_OUTPUT_TOKENS", "1400")),
+            max_output_tokens=int(os.environ.get("FORGEAI_MAX_OUTPUT_TOKENS", "2600")),
             request_timeout=int(os.environ.get("FORGEAI_TIMEOUT", "120")),
-            max_retries=int(os.environ.get("FORGEAI_MAX_RETRIES", "3")),
+            max_retries=int(os.environ.get("FORGEAI_MAX_RETRIES", "4")),
+            tokens_per_minute=int(
+                os.environ.get(
+                    "FORGEAI_TPM", "0" if provider in {"ollama", "heuristic"} else "8000"
+                )
+            ),
         )
 
     def describe(self) -> str:

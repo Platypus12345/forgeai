@@ -28,9 +28,15 @@ from ..retrieval import Retriever
 from ..schemas import GroundabilityFinding, Requirements
 
 # Below LOW the corpus clearly has nothing; above HIGH it clearly has something.
-# Between them we ask the model.
-LOW_EVIDENCE = 0.10
-HIGH_EVIDENCE = 0.42
+# Between them we ask the model, giving it the top passages in full.
+#
+# LOW is deliberately very low. A false "unsupported" is the expensive error in
+# the other direction: it pushes a topic the documents DO cover into the refusal
+# policy, and the agent then declines its own core subject. So the deterministic
+# path only claims "unsupported" when retrieval found essentially nothing, and
+# everything else goes to the model with real evidence attached.
+LOW_EVIDENCE = 0.06
+HIGH_EVIDENCE = 0.55
 
 
 def _probe(topic: str, evidence: str, client: LLMClient) -> tuple[str, str]:
@@ -64,11 +70,11 @@ def check_groundability(
     demoted: list[str] = []
 
     for topic in reqs.must_answer_topics:
-        score, evidence = retriever.evidence_score(topic)
+        score, evidence = retriever.evidence_bundle(topic, k=3, chars=700)
 
         if score < LOW_EVIDENCE:
             status = "unsupported"
-            reason = "No passage in the corpus scores above the evidence floor."
+            reason = "No passage in the corpus matches this topic at all."
         elif score >= HIGH_EVIDENCE:
             status = "supported"
             reason = "Strong lexical and passage-level match in the corpus."
@@ -95,7 +101,10 @@ def check_groundability(
             GroundabilityFinding(
                 topic=topic,
                 status=status,
-                best_evidence=evidence or "(no matching passage)",
+                best_evidence=(
+                    " ".join(evidence.split())[:200] if evidence
+                    else "(no matching passage)"
+                ),
                 score=round(score, 3),
                 action=f"{action} {reason}".strip(),
             )

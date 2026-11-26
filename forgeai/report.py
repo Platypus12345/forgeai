@@ -365,16 +365,32 @@ def write_report(result: Any, meta: dict, run_dir: Path) -> Path:
         f"- wall clock: {budget.get('seconds')}s of {budget.get('latency_budget_s')}s",
         f"- JSON repair turns needed: {budget.get('json_repairs')}",
         f"- deterministic fallbacks taken: {budget.get('deterministic_fallbacks')}",
+        f"- API calls that failed outright: {budget.get('api_errors', 0)}",
+        f"- replies truncated at the token limit: {budget.get('output_truncations', 0)}",
         "",
     ]
     per_stage = budget.get("per_stage") or {}
     if per_stage:
-        L += ["| Stage | Calls | Tokens | Seconds | Repairs | Fallbacks |", "|---|---|---|---|---|---|"]
+        L += [
+            "| Stage | Calls | Tokens | Seconds | Repairs | Fallbacks | API errors |",
+            "|---|---|---|---|---|---|---|",
+        ]
         for stage, s in sorted(per_stage.items(), key=lambda kv: -kv[1]["tokens"]):
             L.append(
                 f"| {stage} | {s['calls']} | {s['tokens']:,} | {s['seconds']} | "
-                f"{s['repairs']} | {s['fallbacks']} |"
+                f"{s['repairs']} | {s['fallbacks']} | {s.get('api_errors', 0)} |"
             )
+        L += [""]
+    if budget.get("api_errors"):
+        L += [
+            f"> :warning: {budget['api_errors']} model call(s) failed at the transport",
+            "> level (rate limit, timeout or provider error) and exhausted their",
+            "> retries. Each one pushed its stage onto a deterministic fallback, so",
+            "> this run is partly a measurement of the provider, not only of the",
+            "> factory. Sample error(s):",
+            "",
+        ]
+        L += [f"> - `{e}`" for e in budget.get("api_error_samples", [])]
         L += [""]
     if budget.get("deterministic_fallbacks"):
         L += [
