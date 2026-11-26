@@ -619,3 +619,64 @@ class TestEndToEnd:
         result = factory.build("Build me an assistant.", empty, out_dir=tmp_path / "run")
         assert result.error
         assert (result.run_dir / "REPORT.md").exists()
+
+
+# --- provider daily quota is a budget stop, not a transient 429 -------------
+#
+# A per-minute 429 clears in seconds and deserves a retry. A per-day 429 does
+# not clear inside a run: the retry ladder burns the latency budget on every
+# call and then hands each stage its deterministic fallback, producing a run
+# that reports a plausible score for the no-model path. These two tests pin
+# the distinction, because getting it wrong is how a factory lies about why it
+# scored what it scored.
+
+def test_daily_quota_errors_are_recognised():
+    from forgeai.llm import is_daily_quota_error
+
+    tpd = (
+        "429 from model endpoint: Rate limit reached for model `openai/gpt-oss-20b` "
+        "on tokens per day (TPD): Limit 200000, Used 199455, Requested 620."
+    )
+    assert is_daily_quota_error(tpd)
+    assert is_daily_quota_error("Rate limit reached ... requests per day (RPD): Limit 1000")
+    # Per-minute limits must stay retryable.
+    assert not is_daily_quota_error(
+        "Rate limit reached ... on tokens per minute (TPM): Limit 8000"
+    )
+    assert not is_daily_quota_error("Service Unavailable")
+    assert not is_daily_quota_error("")
+
+
+def test_daily_quota_stops_the_run_instead_of_silently_falling_back(monkeypatch):
+    from forgeai.config import BudgetConfig, ModelConfig
+    from forgeai.llm import BudgetExceeded, Ledger, LLMClient, ProviderQuotaExhausted
+
+    ledger = Ledger(BudgetConfig())
+    client = LLMClient(
+        ModelConfig(provider="openai", base_url="https://example.invalid/v1",
+                    model="openai/gpt-oss-20b", api_key="k", max_retries=4),
+        ledger,
+    )
+
+    calls = {"n": 0}
+
+    def boom(*_a, **_kw):
+        calls["n"] += 1
+        raise RuntimeError(
+            "429 from model endpoint: on tokens per day (TPD): Limit 200000, Used 199999"
+        )
+
+    monkeypatch.setattr(client, "_call_raw", boom)
+
+    with pytest.raises(ProviderQuotaExhausted):
+        client.structured(
+            "anything", stage="agent.answer", fallback=lambda: {"answer": "fallback"}
+        )
+    # Exactly one attempt: no retry ladder against an allowance that will not
+    # return for hours.
+    assert calls["n"] == 1
+    # And it is a budget condition, so the factory's existing budget handling
+    # stops the run and still writes its artifacts.
+    assert isinstance(ProviderQuotaExhausted("x"), BudgetExceeded)
+    # Critically, the deterministic fallback was NOT used to paper over it.
+    assert ledger.fallbacks == 0

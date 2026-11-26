@@ -34,6 +34,30 @@ class BudgetExceeded(RuntimeError):
     """Raised when a run has spent its token or latency allowance."""
 
 
+class ProviderQuotaExhausted(BudgetExceeded):
+    """The provider's *daily* allowance is gone, not a transient rate limit.
+
+    This is a budget condition wearing a 429's clothes, and the distinction
+    matters more than it looks. A per-minute limit clears in seconds, so
+    retrying is right. A per-day limit does not clear inside a run, so the
+    retry ladder burns the latency budget four times per call and then hands
+    every stage its deterministic fallback - producing a run that *looks*
+    finished, reports a plausible-looking score, and is in fact an evaluation
+    of the no-model fallback path. A factory that cannot tell "the model
+    answered badly" from "the model never answered" cannot report honestly,
+    so this inherits from BudgetExceeded and stops the run with a stop_reason
+    that says what actually happened.
+    """
+
+
+_DAILY_QUOTA = re.compile(r"(tokens|requests) per day|\bTPD\b|\bRPD\b", re.I)
+
+
+def is_daily_quota_error(msg: str) -> bool:
+    """True when a 429 names a per-*day* allowance rather than a per-minute one."""
+    return bool(_DAILY_QUOTA.search(msg or ""))
+
+
 @dataclass
 class CallRecord:
     stage: str
@@ -416,6 +440,11 @@ class LLMClient:
                 )
                 if self.verbose:
                     print(f"  [llm] {stage} attempt {attempt + 1} failed: {exc}")
+                if is_daily_quota_error(str(exc)):
+                    raise ProviderQuotaExhausted(
+                        f"provider daily quota exhausted during {stage}: "
+                        f"{str(exc)[:200]}"
+                    ) from exc
                 # Rate limits need real backoff, and the provider usually says
                 # exactly how long to wait - believe it rather than guessing.
                 msg = str(exc)
