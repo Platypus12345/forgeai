@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -811,3 +812,47 @@ def test_build_is_disabled_on_a_shared_deployment(monkeypatch):
     monkeypatch.setenv("K_SERVICE", "forgeai")
     allowed, why = module.build_allowed()
     assert not allowed and "shared deployment" in why
+
+
+def test_a_budget_stop_still_writes_the_agent_definition(tmp_path, monkeypatch):
+    """The agent is the deliverable; a budget stop must not discard it.
+
+    The ship-spares run scored three iterations, kept the best, then hit its
+    latency budget during the fourth. It wrote the scorecards, the eval set,
+    the iteration logs and the report - and threw away the one artifact a
+    reviewer has to actually run.
+    """
+    from forgeai.config import FactoryConfig
+    from forgeai.factory import Factory, RunResult
+    from forgeai.schemas import AgentDefinition
+
+    factory = Factory(FactoryConfig(), verbose=False)
+    definition = _definition()
+    result = RunResult(run_dir=tmp_path)
+    result.definition = definition
+    result.stop_reason = "budget exhausted: latency budget exhausted"
+    result.error = "latency budget exhausted"
+
+    factory._persist(result, "a brief", tmp_path, time.time())
+
+    assert (tmp_path / "agent.json").is_file(), "the deliverable was discarded"
+    assert (tmp_path / "agent_prompt.md").is_file()
+    reloaded = AgentDefinition.load(tmp_path / "agent.json")
+    assert reloaded.agent_id == definition.agent_id
+    # And the stop reason is still recorded honestly alongside it.
+    meta = json.loads((tmp_path / "run.json").read_text(encoding="utf-8"))
+    assert "latency budget" in meta["stop_reason"]
+
+
+def test_persist_without_a_definition_is_not_an_error(tmp_path):
+    """A run that died before generating anything still writes its evidence."""
+    from forgeai.config import FactoryConfig
+    from forgeai.factory import Factory, RunResult
+
+    factory = Factory(FactoryConfig(), verbose=False)
+    result = RunResult(run_dir=tmp_path)
+    result.stop_reason = "budget exhausted before the generator ran"
+    factory._persist(result, "a brief", tmp_path, time.time())
+
+    assert (tmp_path / "run.json").is_file()
+    assert not (tmp_path / "agent.json").exists()

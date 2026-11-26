@@ -283,6 +283,12 @@ class Factory:
                  f"({card.passed}/{card.total} passed)  failures {card.failures_by_category}")
 
         best_definition, best_card, best_results = definition, card, results
+        # Publish the best definition on the result as soon as one exists, and
+        # again whenever it improves. The agent *is* the product, and a run
+        # that stops on a budget - which is a documented, expected way for
+        # this factory to end - used to reach its exit handler holding a
+        # perfectly good scored agent and write everything except that.
+        result.definition = best_definition
 
         # -- stage 6: critic-optimizer loop ------------------------------
         self.log("\n[6/7] Critic-optimizer loop (max "
@@ -411,6 +417,7 @@ class Factory:
                 best_definition, best_card, best_results = (
                     candidate_def, new_card, new_results
                 )
+                result.definition = best_definition
                 if 0 < gain < cfg.budget.min_gain_per_iteration:
                     stop_reason = (
                         f"iteration stopped paying for itself (gain {gain:+.3f} < "
@@ -436,15 +443,6 @@ class Factory:
                 f"verdict {result.judge_audit['verdict']}"
             )
 
-        best_definition.save(run_dir / "agent.json")
-        (run_dir / "agent_prompt.md").write_text(
-            f"# System prompt - {best_definition.name}\n\n"
-            f"_fingerprint {best_definition.fingerprint()}, version "
-            f"{best_definition.version}_\n\n```\n"
-            + best_definition.render_prompt()
-            + "\n```\n",
-            encoding="utf-8",
-        )
         self._persist(result, brief, corpus_dir, started)
         self.log(f"\nDone. Final score {best_card.score:.3f} "
                  f"({best_card.passed}/{best_card.total}). Artifacts in {run_dir}")
@@ -484,6 +482,27 @@ class Factory:
         }
         if result.error:
             meta["error"] = result.error
+
+        # The agent definition is the deliverable, so it is written on every
+        # exit path - success, budget stop, spent quota, Ctrl-C - not only the
+        # happy one. A ship-spares run proved why: it scored three iterations,
+        # kept the best, then hit its latency budget during the fourth and
+        # wrote the scorecards, the eval set and the report while discarding
+        # the one artifact a reviewer actually has to run.
+        if result.definition is not None:
+            try:
+                result.definition.save(run_dir / "agent.json")
+                (run_dir / "agent_prompt.md").write_text(
+                    f"# System prompt - {result.definition.name}\n\n"
+                    f"_fingerprint {result.definition.fingerprint()}, version "
+                    f"{result.definition.version}_\n\n```\n"
+                    + result.definition.render_prompt()
+                    + "\n```\n",
+                    encoding="utf-8",
+                )
+            except Exception as exc:  # never lose the rest over this
+                self.log(f"!! could not write the agent definition: {exc}")
+
         (run_dir / "run.json").write_text(
             json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
         )
