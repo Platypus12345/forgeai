@@ -1,0 +1,4 @@
+# Optional: the Streamlit control panel (app.py), which can also run a full
+# build. Not needed for the CLI or for the serverless deployment.
+-r requirements.txt
+streamlit>=1.36.0

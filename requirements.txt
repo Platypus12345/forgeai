@@ -1,5 +1,12 @@
-# Core factory: stdlib + two small deps.
+# The factory itself: standard library plus two small dependencies, so a
+# reviewer can clone this and run it without a GPU or a model download.
 requests>=2.31.0
 pypdf>=4.2.0
-# Optional web UI (stretch goal). Not required for the CLI.
-streamlit>=1.36.0
+
+# The serverless front end (api/index.py). Small enough to belong here,
+# because this is the file a Python host installs from by default.
+starlette>=0.37.2
+
+# The Streamlit UI (app.py) is a separate install: it is far heavier than
+# everything above and nothing else needs it.
+#   pip install -r requirements-ui.txt

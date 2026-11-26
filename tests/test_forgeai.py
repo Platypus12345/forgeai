@@ -717,3 +717,45 @@ def test_pass_threshold_is_overridable_from_the_environment(monkeypatch):
     assert FactoryConfig().pass_threshold == 0.95
     monkeypatch.delenv("FORGEAI_PASS_THRESHOLD")
     assert FactoryConfig().pass_threshold == 0.85
+
+
+# --- the serverless front end ---------------------------------------------
+#
+# `app.py` is Streamlit, which is a long-lived server; a serverless host wants
+# a function that answers one request and exits, so it looks for an ASGI
+# callable and fails the build on a Streamlit script. api/index.py is that
+# callable. These tests pin the two properties that matter once it has a
+# public address: it must not read outside the checkout, and it must still
+# answer when no model key is configured.
+
+def test_serverless_app_serves_and_refuses_unknown_runs():
+    pytest.importorskip("starlette")
+    from starlette.testclient import TestClient
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from api.index import app
+
+    client = TestClient(app)
+    assert client.get("/healthz").status_code == 200
+    assert client.get("/").status_code == 200
+    # A run name is user input and is matched against the listing, never
+    # joined onto a path, so traversal cannot reach outside runs/.
+    assert client.get("/run/../../etc/passwd").status_code == 404
+    assert client.get("/chat/no-such-run").status_code == 200  # renders "no such run"
+    assert client.post("/api/chat", json={"run": "nope", "question": "hi"}).status_code == 404
+    assert client.post("/api/chat", json={"run": "nope"}).status_code == 400
+
+
+def test_serverless_corpus_path_survives_a_windows_run_json(tmp_path):
+    pytest.importorskip("starlette")
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from api.index import REPO, corpus_for
+
+    # run.json records the corpus path as the producing machine wrote it. A run
+    # built on Windows must still serve from a Linux function.
+    resolved = corpus_for({"corpus_dir": "demos\hr_policy\docs"})
+    assert resolved == REPO / "demos" / "hr_policy" / "docs"
+    assert resolved.is_dir()
+    # An unresolvable path falls back to something real rather than crashing
+    # the whole deployment.
+    assert corpus_for({"corpus_dir": "nowhere/at/all"}).is_dir()
