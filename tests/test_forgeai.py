@@ -162,6 +162,27 @@ class TestRetrieval:
         assert bundle.count("[") >= 2, "expected several cited passages"
         assert len(bundle) > 400, "passages must be long enough to judge"
 
+    def test_evidence_bundle_does_not_silently_cut_a_table_row(self):
+        """A live run marked part AX-3310 ungroundable because the catalogue row
+        containing it sat past a 700-character cut in the evidence shown to the
+        guard. The model judged correctly on evidence the pipeline had mangled."""
+        from forgeai.docs import load_documents as _load
+
+        docs, _ = _load(SPARES_DOCS)
+        chunks = chunk_documents(docs, 900, 150)
+        r = Retriever(chunks, RetrievalConfig(top_k=4, min_score=0.0))
+        _, bundle = r.evidence_bundle(
+            "How many units of AX-3310 are currently in stock?", k=3
+        )
+        assert "AX-3310" in bundle, "the part must be visible in its own evidence"
+        assert "stock_qty" in bundle, "the column that answers the topic must be visible"
+
+    def test_truncated_evidence_announces_itself(self):
+        """Absence of evidence must not read as evidence of absence."""
+        r = self._retriever()
+        _, bundle = r.evidence_bundle("annual leave entitlement", k=1, chars=120)
+        assert "truncated" in bundle
+
     def test_evidence_bundle_empty_for_absent_topic(self):
         r = self._retriever()
         score, bundle = r.evidence_bundle("quantum chromodynamics lattice gauge")

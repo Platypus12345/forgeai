@@ -70,7 +70,7 @@ def check_groundability(
     demoted: list[str] = []
 
     for topic in reqs.must_answer_topics:
-        score, evidence = retriever.evidence_bundle(topic, k=3, chars=700)
+        score, evidence = retriever.evidence_bundle(topic, k=3, chars=0)
 
         if score < LOW_EVIDENCE:
             status = "unsupported"

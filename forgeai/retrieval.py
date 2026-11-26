@@ -166,7 +166,7 @@ class Retriever:
         return best.score, f"{best.chunk.cite()}: {snippet}"
 
     def evidence_bundle(
-        self, text: str, k: int = 3, chars: int = 700
+        self, text: str, k: int = 3, chars: int = 0
     ) -> tuple[float, str]:
         """Several substantial passages for `text`, for the groundability guard.
 
@@ -183,7 +183,17 @@ class Retriever:
             return 0.0, ""
         blocks = []
         for hit in hits:
-            body = " ".join(hit.chunk.text.split())[:chars]
+            body = " ".join(hit.chunk.text.split())
+            # `chars=0` means show the whole passage. Chunks are already bounded
+            # by chunk_size, so this is cheap - and silently cutting one is how
+            # the guard got lied to: the catalogue chunk that *did* contain part
+            # AX-3310 was ranked first, the row sat past the 700-character cut,
+            # and the model correctly concluded the part was absent from the
+            # evidence it was shown. A truncated passage must therefore announce
+            # itself, so that absence of evidence is not read as evidence of
+            # absence.
+            if chars and len(body) > chars:
+                body = body[:chars] + " [...passage truncated, more rows/text follow]"
             blocks.append(f"[{hit.chunk.cite()}] (match {hit.score:.2f})\n{body}")
         return hits[0].score, "\n\n".join(blocks)
 

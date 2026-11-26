@@ -278,6 +278,11 @@ class LLMClient:
         self.verbose = verbose
         self._session = requests.Session()
         self.limiter = RateLimiter(cfg.tokens_per_minute, verbose=verbose)
+        # Some endpoints cap output tokens per request far below our default
+        # (Groq's qwen tier allows 1000 OTPM and rejects a larger max_tokens
+        # outright, so the call never even runs). The cap is discovered from the
+        # error and then respected for the rest of the session.
+        self._output_cap: int | None = None
 
     # -- plumbing ---------------------------------------------------------
     @property
@@ -361,6 +366,8 @@ class LLMClient:
 
         last_err: Exception | None = None
         budget_tokens = max_tokens
+        if self._output_cap is not None:
+            budget_tokens = min(budget_tokens, self._output_cap)
         for attempt in range(self.cfg.max_retries):
             prompt_estimate = estimate_tokens(system or "") + estimate_tokens(prompt)
             # Reserve the output allowance too: the meter counts what comes back.
@@ -389,8 +396,9 @@ class LLMClient:
                 # A reply cut off at the token limit is almost never parseable.
                 # Retry once with a bigger budget rather than sending a
                 # half-written JSON object down the pipeline.
-                if truncated and attempt < self.cfg.max_retries - 1:
-                    budget_tokens = min(int(budget_tokens * 1.8), 8000)
+                ceiling = self._output_cap if self._output_cap is not None else 8000
+                if truncated and attempt < self.cfg.max_retries - 1 and budget_tokens < ceiling:
+                    budget_tokens = min(int(budget_tokens * 1.8), ceiling)
                     if self.verbose:
                         print(
                             f"  [llm] {stage} output truncated; retrying with "
@@ -412,6 +420,22 @@ class LLMClient:
                 # exactly how long to wait - believe it rather than guessing.
                 msg = str(exc)
                 wait = min(2 ** attempt, 15)
+                # "Request too large ... Limit N": the provider will never serve
+                # this max_tokens. Lower it and retry immediately - backing off
+                # does not help a request that is structurally too big.
+                cap = re.search(r"OTPM\)?: Limit (\d+)", msg)
+                if cap and ("too large" in msg.lower() or "reduce max_tokens" in msg.lower()):
+                    allowed = max(256, int(cap.group(1)) - 64)
+                    if self._output_cap is None or allowed < self._output_cap:
+                        self._output_cap = allowed
+                    if budget_tokens > allowed:
+                        budget_tokens = allowed
+                        if self.verbose:
+                            print(
+                                f"  [llm] {stage} provider caps output at "
+                                f"{cap.group(1)}; retrying with max_tokens={allowed}"
+                            )
+                        continue
                 if "429" in msg or "rate" in msg.lower():
                     hint = re.search(r"try again in ([\d.]+)s", msg)
                     wait = (float(hint.group(1)) + 1.0) if hint else max(wait, 12)
