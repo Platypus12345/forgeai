@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from forgeai.agent_runtime import RunnableAgent
 from forgeai.config import FactoryConfig
 from forgeai.docs import chunk_documents, load_documents
-from forgeai.llm import Ledger, LLMClient
+from forgeai.llm import Ledger, LLMClient, ProviderQuotaExhausted
 from forgeai.schemas import AgentDefinition, EvalSet
 from forgeai.stages.judge import run_evaluation
 
@@ -54,10 +54,26 @@ def main() -> int:
     human_def = AgentDefinition.load(args.baseline)
 
     print(f"Scoring both agents on the same {len(eval_set.cases)} generated cases\n")
-    print("factory agent...")
-    f_card, f_results = evaluate(factory_def, Path(args.docs), eval_set, client, cfg.seed)
-    print("hand-written agent...")
-    h_card, h_results = evaluate(human_def, Path(args.docs), eval_set, client, cfg.seed)
+    # Both agents have to be scored on the same eval set or there is no
+    # comparison. A half-measured run is worse than none, because the number
+    # it leaves behind still looks like a result.
+    try:
+        print("factory agent...")
+        f_card, f_results = evaluate(
+            factory_def, Path(args.docs), eval_set, client, cfg.seed
+        )
+        print("hand-written agent...")
+        h_card, h_results = evaluate(
+            human_def, Path(args.docs), eval_set, client, cfg.seed
+        )
+    except ProviderQuotaExhausted as exc:
+        print(f"\nStopped: {exc}", file=sys.stderr)
+        print(
+            "\nNo comparison was written. Scoring one agent and not the other "
+            "would produce a number that reads like a finding and is not one.",
+            file=sys.stderr,
+        )
+        return 2
 
     f_by_id = {r.case_id: r for r in f_results}
     h_by_id = {r.case_id: r for r in h_results}

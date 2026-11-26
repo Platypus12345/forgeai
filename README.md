@@ -12,13 +12,21 @@ model** - so the interesting part is not the prompting, it is what happens when
 the model returns garbage, and how you can tell whether the resulting score
 means anything.
 
+**Live:** <https://forgeai-six-alpha.vercel.app> - browse the committed runs,
+read their reports, and put questions to the agents the factory produced. That
+deployment runs without a model key, so its answers come from the same
+deterministic extractive path the CLI falls back to: real retrieval over the
+real documents, with no model writing the prose. It still refuses what the
+documents do not support, which is the part worth checking.
+
 ---
 
 ## Quickstart
 
 ```bash
 git clone <this repo> && cd marine_assign
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt      # CLI + serverless UI
+python -m pip install -r requirements-ui.txt   # optional: the Streamlit app
 
 cp .env.example .env     # then set FORGEAI_API_KEY (see "Configuring the model")
 
@@ -214,7 +222,7 @@ All five are implemented.
 | **Human checkpoint** | `--checkpoint` prints the requirements and lets the requester approve or edit scope / must-answer / must-refuse before generation proceeds. |
 | **Factory vs human baseline** | `python scripts/baseline_compare.py --run runs/<run> --baseline demos/hr_policy/handwritten_agent.json --docs demos/hr_policy/docs` - scores a hand-written agent and the factory's on the same eval set and reports where each wins. |
 | **Regression mode** | `python -m forgeai.cli regress --run runs/<run> --docs demos/hr_policy/docs_v2` - re-runs the stored eval set against a changed corpus and reports exactly which cases broke. `docs_v2` is a revision-8 leave policy with changed entitlements and the parental leave section removed. |
-| **Web UI** | `streamlit run app.py` - build, browse past runs and artifacts, and chat with any produced agent. |
+| **Web UI** | Two, because one program cannot be both. `streamlit run app.py` is the control panel: it can run a full build, which takes tens of minutes and streams progress, and that is what a long-lived server is for. `api/index.py` is a Starlette app for serverless hosts - it serves the committed artifacts and answers one question per request, which is what a function is for, and is what runs at the live URL. Builds are deliberately not exposed there: they exceed any execution limit, and a public endpoint that spends the host's model quota on demand is a bill, not a demo. |
 
 ---
 

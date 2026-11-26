@@ -759,3 +759,28 @@ def test_serverless_corpus_path_survives_a_windows_run_json(tmp_path):
     # An unresolvable path falls back to something real rather than crashing
     # the whole deployment.
     assert corpus_for({"corpus_dir": "nowhere/at/all"}).is_dir()
+
+
+def test_cli_reports_a_spent_quota_without_a_stack_trace(capsys, monkeypatch):
+    """A reviewer whose key runs dry should get a sentence, not a traceback."""
+    from forgeai import cli
+    from forgeai.llm import ProviderQuotaExhausted
+
+    def blow_up(_args):
+        raise ProviderQuotaExhausted("provider daily quota exhausted during judge")
+
+    monkeypatch.setattr(cli, "build_parser", lambda: _parser_returning(blow_up))
+    assert cli.main([]) == 2
+    err = capsys.readouterr().err
+    assert "daily quota exhausted" in err
+    assert "Traceback" not in err
+    # It must also say what to do about it, not merely what went wrong.
+    assert "FORGEAI_MODEL" in err
+
+
+def _parser_returning(func):
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(func=func)
+    return parser

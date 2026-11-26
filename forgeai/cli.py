@@ -17,7 +17,7 @@ from .agent_runtime import RunnableAgent
 from .config import FactoryConfig
 from .docs import chunk_documents, load_documents
 from .factory import Factory
-from .llm import Ledger, LLMClient
+from .llm import Ledger, LLMClient, ProviderQuotaExhausted
 from .schemas import AgentDefinition, EvalSet
 from .tools import REGISTRY
 
@@ -237,9 +237,31 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+QUOTA_ADVICE = """
+The model provider's daily allowance for this key is gone, so the command
+stopped rather than quietly finishing on its deterministic fallbacks and
+reporting a score that was never really measured.
+
+What to do:
+  * wait for the provider's daily window to roll over, or
+  * point FORGEAI_MODEL at another model on the same key - allowances are
+    usually per model, not per key, or
+  * use a key without a daily cap.
+
+Whatever the command had already produced has been kept.
+""".strip()
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except ProviderQuotaExhausted as exc:
+        # `build` handles this internally and still writes its artifacts. The
+        # other commands have nothing to salvage, and a stack trace is the
+        # wrong way to tell someone their account ran out of tokens.
+        print(f"\nStopped: {exc}\n\n{QUOTA_ADVICE}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
