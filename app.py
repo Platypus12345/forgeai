@@ -79,8 +79,59 @@ def model_banner() -> FactoryConfig:
     return cfg
 
 
+def build_allowed() -> tuple[bool, str]:
+    """Whether this instance may run a full factory build.
+
+    A build takes tens of minutes and a couple of hundred thousand tokens. On
+    a laptop that is the point of the page. On a public deployment it is a
+    stranger's button that spends the host's daily model quota and leaves the
+    next visitor looking at an app that appears hung, so the page is read-only
+    unless someone deliberately says otherwise.
+
+    `FORGEAI_ALLOW_BUILD` overrides the detection in either direction, because
+    guessing where you are running is exactly the kind of thing that should
+    have a manual override.
+    """
+    override = os.environ.get("FORGEAI_ALLOW_BUILD", "").strip().lower()
+    if override in {"1", "true", "yes"}:
+        return True, ""
+    if override in {"0", "false", "no"}:
+        return False, "builds are disabled by FORGEAI_ALLOW_BUILD"
+
+    hosted_markers = (
+        Path("/mount/src").exists(),          # Streamlit Community Cloud
+        bool(os.environ.get("STREAMLIT_SHARING_MODE")),
+        bool(os.environ.get("DYNO")),         # Heroku
+        bool(os.environ.get("K_SERVICE")),    # Cloud Run
+        bool(os.environ.get("VERCEL")),
+    )
+    if any(hosted_markers):
+        return False, "this looks like a shared deployment"
+    return True, ""
+
+
 def page_build() -> None:
     st.header("Build an agent")
+    allowed, why = build_allowed()
+    if not allowed:
+        st.info(
+            f"**Builds are turned off here** - {why}.\n\n"
+            "A build runs for tens of minutes and spends a couple of hundred "
+            "thousand model tokens, so on a shared URL it would drain the "
+            "host's daily quota on behalf of whoever clicked it, and show "
+            "everyone after them an app that looks hung.\n\n"
+            "The **Runs** and **Chat** pages work normally - they read what "
+            "the factory already produced. To build, clone the repo and run "
+            "it locally:\n\n"
+            "```bash\n"
+            "python -m forgeai.cli build \\\n"
+            "    --brief-file demos/hr_policy/brief.txt \\\n"
+            "    --docs       demos/hr_policy/docs\n"
+            "```\n\n"
+            "Set `FORGEAI_ALLOW_BUILD=1` if you host this somewhere and do "
+            "want the button."
+        )
+        return
     cfg = model_banner()
 
     brief = st.text_area(

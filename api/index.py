@@ -10,12 +10,11 @@ be reconciled by configuration; they are different shapes of program.
 
 So the split is by capability, not by preference:
 
-  * Streamlit (`app.py`, local or Streamlit Community Cloud) can *run the
-    factory* - a build takes tens of minutes and streams progress, which is
-    exactly what a long-lived server is for.
+  * Streamlit (`app.py`, local) can *run the factory* - a build takes tens of
+    minutes and streams progress, which is what a long-lived server is for.
   * This app can *show what the factory built and talk to it* - reading the
-    committed artifacts and answering one question per request, which is
-    exactly what a serverless function is for.
+    committed artifacts and answering one question per request, which is what
+    a serverless function is for.
 
 A build is deliberately not exposed here. It would exceed any serverless
 execution limit, and a public endpoint that spends the host's model quota on
@@ -43,10 +42,10 @@ from starlette.requests import Request  # noqa: E402
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse  # noqa: E402
 from starlette.routing import Route  # noqa: E402
 
+from api.render import markdown, page  # noqa: E402
 from forgeai.agent_runtime import RunnableAgent  # noqa: E402
-from forgeai.config import ModelConfig  # noqa: E402
+from forgeai.config import BudgetConfig, ModelConfig  # noqa: E402
 from forgeai.llm import Ledger, LLMClient  # noqa: E402
-from forgeai.config import BudgetConfig  # noqa: E402
 
 RUNS = REPO / "runs"
 _AGENTS: dict[str, RunnableAgent] = {}
@@ -87,8 +86,7 @@ def corpus_for(run: dict[str, Any]) -> Path:
 
 
 def client() -> LLMClient:
-    cfg = ModelConfig.from_env()
-    return LLMClient(cfg, Ledger(BudgetConfig()))
+    return LLMClient(ModelConfig.from_env(), Ledger(BudgetConfig()))
 
 
 def agent_for(name: str) -> RunnableAgent | None:
@@ -110,176 +108,276 @@ def agent_for(name: str) -> RunnableAgent | None:
     return agent
 
 
-# -- rendering --------------------------------------------------------------
-
-STYLE = """
-:root{--bg:#0b0d10;--card:#13171c;--line:#242b33;--fg:#e8edf2;--dim:#9aa7b4;
---accent:#6ea8fe;--good:#4ec9a0;--bad:#f07178}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);
-font:15px/1.6 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-.wrap{max-width:860px;margin:0 auto;padding:32px 20px 72px}
-header h1{font-size:26px;margin:0 0 4px}
-header p{color:var(--dim);margin:0 0 28px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
-padding:18px 20px;margin:0 0 16px}
-.card h2{font-size:17px;margin:0 0 10px}
-.meta{color:var(--dim);font-size:13px}
-.row{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 0}
-.stat{min-width:120px}
-.stat b{display:block;font-size:22px}
-.stat span{color:var(--dim);font-size:12px;text-transform:uppercase;
-letter-spacing:.06em}
-pre{background:#0e1216;border:1px solid var(--line);border-radius:8px;
-padding:14px;overflow:auto;font-size:13px;white-space:pre-wrap;word-break:break-word}
-input,button{font:inherit}
-input[type=text]{width:100%;padding:11px 13px;border-radius:8px;
-border:1px solid var(--line);background:#0e1216;color:var(--fg)}
-button{padding:11px 18px;border-radius:8px;border:0;background:var(--accent);
-color:#06101f;font-weight:600;cursor:pointer}
-button:disabled{opacity:.5;cursor:default}
-.note{border-left:3px solid var(--accent);padding:8px 0 8px 14px;color:var(--dim);
-font-size:14px;margin:14px 0}
-.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;
-border:1px solid var(--line);color:var(--dim);margin:0 6px 6px 0}
-.answer{border-top:1px solid var(--line);margin-top:16px;padding-top:16px}
-footer{color:var(--dim);font-size:13px;margin-top:34px}
-"""
+def has_model() -> bool:
+    return ModelConfig.from_env().provider != "heuristic"
 
 
-def page(title: str, body: str) -> HTMLResponse:
-    return HTMLResponse(
-        "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
-        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
-        f"<title>{html.escape(title)}</title><style>{STYLE}</style></head>"
-        f"<body><div class='wrap'>{body}"
-        "<footer>ForgeAI &mdash; the factory runs from the CLI or the Streamlit "
-        "app; this deployment serves what it produced."
-        "</footer></div></body></html>"
+# -- fragments --------------------------------------------------------------
+
+def model_notice() -> str:
+    if has_model():
+        cfg = ModelConfig.from_env()
+        return (
+            "<div class='notice'><div><b>Live model.</b> Answers on this "
+            f"deployment are written by <code>{html.escape(cfg.model)}</code>, "
+            "grounded in the run's documents.</div></div>"
+        )
+    return (
+        "<div class='notice'><div><b>Running without a model key.</b> Answers "
+        "come from the deterministic extractive path the factory falls back to "
+        "&mdash; real retrieval over the real documents, quoting them rather "
+        "than writing prose, so the phrasing is seam-y on purpose. What it "
+        "still does correctly is refuse questions the documents cannot "
+        "support, which is the part worth testing.</div></div>"
     )
 
 
-def model_note() -> str:
-    cfg = ModelConfig.from_env()
-    if cfg.provider == "heuristic":
+def score_block(cards: list[dict]) -> str:
+    """Baseline, final and the delta between them."""
+    if not cards:
         return (
-            "<div class='note'>No model key is configured on this deployment, so "
-            "answers come from the deterministic extractive path &mdash; real "
-            "retrieval over the real documents, without a model writing the prose. "
-            "Set <code>FORGEAI_API_KEY</code>, <code>FORGEAI_BASE_URL</code> and "
-            "<code>FORGEAI_MODEL</code> in the host's environment to use a model."
-            "</div>"
+            "<div class='chips'><span class='chip no'>no scorecard</span></div>"
         )
-    return f"<div class='note'>Model: {html.escape(cfg.describe())}</div>"
+    first, last = cards[0]["score"], cards[-1]["score"]
+    delta = last - first
+    iters = len(cards) - 1
+    if iters:
+        cls = "delta" if delta > 0 else "delta flat"
+        sign = "+" if delta > 0 else ""
+        middle = (
+            f"<span class='arrow'>&rarr;</span>"
+            f"<div class='score'><b>{last:.3f}</b><span>final</span></div>"
+            f"<span class='{cls}'>{sign}{delta:.3f} over "
+            f"{iters} iteration{'s' if iters != 1 else ''}</span>"
+        )
+    else:
+        middle = (
+            "<span class='delta flat'>stopped at baseline</span>"
+        )
+    bar = int(round(last * 100))
+    good = " good" if last >= 0.85 else ""
+    return (
+        f"<div class='scores'><div class='score'><b>{first:.3f}</b>"
+        f"<span>baseline</span></div>{middle}</div>"
+        f"<div class='bar'><i class='{good.strip()}' style='width:{bar}%'></i></div>"
+    )
 
+
+def case_chips(card: dict) -> str:
+    kinds = card.get("by_kind") or {}
+    label = {
+        "answerable": "answerable",
+        "out_of_scope": "refusals",
+        "edge": "edge cases",
+    }
+    chips = []
+    for key, text in label.items():
+        k = kinds.get(key)
+        if not k:
+            continue
+        ok = k["passed"] == k["total"]
+        chips.append(
+            f"<span class='chip {'ok' if ok else ''}'>{text} "
+            f"{k['passed']}/{k['total']}</span>"
+        )
+    for cat, count in sorted((card.get("failures_by_category") or {}).items()):
+        chips.append(f"<span class='chip no'>{html.escape(cat)} &times;{count}</span>")
+    return f"<div class='chips'>{''.join(chips)}</div>" if chips else ""
+
+
+# -- routes -----------------------------------------------------------------
 
 async def index(_: Request) -> HTMLResponse:
     runs = run_dirs()
+    body = (
+        "<div class='hero'><h1>The machine that builds the chatbot</h1>"
+        "<p class='lede'>ForgeAI takes a one-paragraph brief and a folder of "
+        "documents and produces a working, tested, document-grounded agent "
+        "&mdash; then writes its own eval set from those documents, "
+        "<strong>classifies every failure</strong>, applies targeted fixes, "
+        "re-tests, and reports what still does not work.</p></div>"
+    ) + model_notice()
+
     if not runs:
-        cards = (
-            "<div class='card'><h2>No runs committed yet</h2><p class='meta'>"
-            "Produce one with <code>python -m forgeai.cli build --brief-file "
-            "demos/hr_policy/brief.txt --docs demos/hr_policy/docs</code>.</p></div>"
+        body += (
+            "<div class='card empty'><h2>No runs committed yet</h2>"
+            "<p class='sub'>Produce one with "
+            "<code class='mono'>python -m forgeai.cli build --brief-file "
+            "demos/hr_policy/brief.txt --docs demos/hr_policy/docs</code></p>"
+            "</div>"
         )
-    else:
-        cards = ""
-        for path in runs:
-            try:
-                data = json.loads((path / "run.json").read_text(encoding="utf-8"))
-            except Exception:
-                continue
-            cards_scores = data.get("scorecards") or []
-            first = cards_scores[0]["score"] if cards_scores else None
-            last = cards_scores[-1]["score"] if cards_scores else None
-            stats = ""
-            if first is not None:
-                stats = (
-                    f"<div class='row'><div class='stat'><b>{first:.3f}</b>"
-                    "<span>baseline</span></div>"
-                    f"<div class='stat'><b>{last:.3f}</b><span>final</span></div>"
-                    f"<div class='stat'><b>{len(cards_scores) - 1}</b>"
-                    "<span>iterations</span></div></div>"
-                )
-            cards += (
-                f"<div class='card'><h2>{html.escape(path.name)}</h2>"
-                f"<p class='meta'>{html.escape(str(data.get('model', '')))} &middot; "
-                f"{html.escape(str(data.get('stop_reason', '')))}</p>"
-                f"{stats}"
-                f"<p style='margin-top:14px'><a href='/run/{path.name}'>Report</a>"
-                f" &nbsp;&middot;&nbsp; <a href='/chat/{path.name}'>Chat with it</a></p>"
-                "</div>"
+        return HTMLResponse(page("ForgeAI", body))
+
+    for path in runs:
+        try:
+            data = json.loads((path / "run.json").read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        cards = data.get("scorecards") or []
+        definition: dict[str, Any] = {}
+        try:
+            definition = json.loads(
+                (path / "agent.json").read_text(encoding="utf-8")
             )
-    return page(
-        "ForgeAI",
-        "<header><h1>ForgeAI</h1><p>A factory that turns a one-paragraph brief and "
-        "a folder of documents into a tested, document-grounded agent &mdash; then "
-        "measures it, diagnoses its failures and repairs them.</p></header>"
-        + model_note()
-        + cards,
-    )
+        except Exception:
+            pass
+        tools = definition.get("tools") or []
+        tool_chips = "".join(
+            f"<span class='chip key'>{html.escape(t)}</span>" for t in tools
+        ) or "<span class='chip'>no tools attached</span>"
+        model = str(data.get("model", "")).split(":", 1)[-1]
+        runnable = (path / "agent.json").is_file()
+        chat_btn = (
+            f"<a class='btn primary' href='/chat/{path.name}'>Ask it something</a>"
+            if runnable
+            else "<span class='btn' title='this run stopped before producing an "
+                 "agent' aria-disabled='true'>No agent produced</span>"
+        )
+        body += (
+            f"<div class='card pad-lg'><div class='run-head'>"
+            f"<h2>{html.escape(definition.get('name') or path.name)}</h2>"
+            f"<span class='chip'>{html.escape(model)}</span></div>"
+            f"<p class='sub'>{html.escape(path.name)}</p>"
+            f"{score_block(cards)}"
+            f"{case_chips(cards[-1]) if cards else ''}"
+            f"<h3>Tools attached</h3><div class='chips'>{tool_chips}</div>"
+            f"<div class='actions'>{chat_btn}"
+            f"<a class='btn' href='/run/{path.name}'>Read the report</a>"
+            f"</div></div>"
+        )
+    return HTMLResponse(page("ForgeAI", body))
 
 
 async def run_page(request: Request) -> HTMLResponse:
     run = load_run(request.path_params["run"])
     if not run:
-        return page("Not found", "<div class='card'><h2>No such run</h2>"
-                                 "<p><a href='/'>Back</a></p></div>")
+        return HTMLResponse(
+            page("Not found", "<div class='card empty'><h2>No such run</h2>"
+                              "<p class='sub'><a href='/'>Back to all runs</a>"
+                              "</p></div>"),
+            status_code=404,
+        )
+    name = run["_dir"].name
     report = run["_dir"] / "REPORT.md"
     text = report.read_text(encoding="utf-8") if report.is_file() else "(no report)"
-    name = run["_dir"].name
-    return page(
-        name,
-        f"<header><h1>{html.escape(name)}</h1>"
-        f"<p><a href='/'>&larr; All runs</a> &nbsp;&middot;&nbsp; "
-        f"<a href='/chat/{name}'>Chat with this agent</a></p></header>"
-        f"<div class='card'><pre>{html.escape(text)}</pre></div>",
+    return HTMLResponse(
+        page(
+            name,
+            f"<div class='card pad-lg'><div class='md'>{markdown(text)}</div></div>",
+            nav_extra=(
+                f"<a href='/chat/{name}'>Chat</a><a href='/'>All runs</a>"
+            ),
+        )
     )
+
+
+SUGGESTIONS = {
+    "hr": [
+        "How many annual leave days do shore staff get?",
+        "What is the notice period for resigning?",
+        "What is my shipboard rotation entitlement?",
+    ],
+    "spares": [
+        "How many AX-3310 units are in stock?",
+        "What is the warranty on the turbocharger?",
+        "What is the weather in Mumbai today?",
+    ],
+}
 
 
 async def chat_page(request: Request) -> HTMLResponse:
     name = request.path_params["run"]
     run = load_run(name)
     if not run:
-        return page("Not found", "<div class='card'><h2>No such run</h2>"
-                                 "<p><a href='/'>Back</a></p></div>")
-    definition = json.loads((run["_dir"] / "agent.json").read_text(encoding="utf-8"))
+        return HTMLResponse(
+            page("Not found", "<div class='card empty'><h2>No such run</h2>"
+                              "<p class='sub'><a href='/'>Back to all runs</a>"
+                              "</p></div>"),
+            status_code=404,
+        )
+    # A run stopped by a budget or a spent quota keeps whatever it earned, but
+    # it may never have reached the stage that writes agent.json. There is
+    # nothing to talk to, and saying so is better than a 500.
+    definition_path = run["_dir"] / "agent.json"
+    if not definition_path.is_file():
+        return HTMLResponse(
+            page(
+                "Nothing to chat with",
+                "<div class='card empty'><h2>This run has no agent</h2>"
+                "<p class='sub'>It stopped before the generator finished &mdash; "
+                f"<em>{html.escape(str(run.get('stop_reason', 'unknown')))}</em>. "
+                f"The <a href='/run/{html.escape(name)}'>report</a> still shows "
+                "what it managed to produce.</p></div>",
+            ),
+            status_code=404,
+        )
+    definition = json.loads(definition_path.read_text(encoding="utf-8"))
     tools = definition.get("tools") or []
-    tag_html = "".join(f"<span class='tag'>{html.escape(t)}</span>" for t in tools)
-    if not tools:
-        tag_html = "<span class='tag'>no tools attached</span>"
-    return page(
-        f"Chat - {name}",
-        f"<header><h1>{html.escape(definition.get('name') or name)}</h1>"
-        f"<p><a href='/'>&larr; All runs</a> &nbsp;&middot;&nbsp; "
-        f"<a href='/run/{name}'>Report</a></p></header>"
-        + model_note()
-        + f"<div class='card'><p class='meta'>Tools: {tag_html}</p>"
-        "<p class='meta'>Answers are grounded in this run's document folder. "
-        "Ask something outside it and a correctly built agent will refuse.</p>"
-        "<div style='display:flex;gap:10px;margin-top:14px'>"
+    chips = "".join(
+        f"<span class='chip key'>{html.escape(t)}</span>" for t in tools
+    ) or "<span class='chip'>no tools attached</span>"
+    picks = SUGGESTIONS["spares" if "spare" in name else "hr"]
+    buttons = "".join(
+        f"<button onclick=\"fill({json.dumps(q)})\">{html.escape(q)}</button>"
+        for q in picks
+    )
+    body = (
+        f"<div class='hero'><h1>{html.escape(definition.get('name') or name)}</h1>"
+        "<p>Every answer is grounded in this run's document folder. Ask "
+        "something the documents do not cover and a correctly built agent "
+        "refuses rather than guessing &mdash; try the last suggestion.</p></div>"
+        + model_notice()
+        + "<div class='card pad-lg'>"
+        f"<div class='chips'>{chips}</div>"
+        "<div class='ask'>"
         "<input type='text' id='q' placeholder='Ask a question'"
-        " onkeydown='if(event.key===\"Enter\")ask()'>"
-        "<button id='go' onclick='ask()'>Ask</button></div>"
+        " autocomplete='off' onkeydown='if(event.key===\"Enter\")ask()'>"
+        "<button class='btn primary' id='go' onclick='ask()'>Ask</button></div>"
+        f"<div class='suggest'>{buttons}</div>"
         "<div id='out'></div></div>"
-        f"<script>const RUN={json.dumps(name)};"
+    )
+    script = (
+        "<script>const RUN=" + json.dumps(name) + ";"
+        "function esc(s){const d=document.createElement('div');"
+        "d.textContent=s==null?'':String(s);return d.innerHTML}"
+        "function fill(q){document.getElementById('q').value=q;ask()}"
         "async function ask(){"
-        "const q=document.getElementById('q').value.trim();if(!q)return;"
+        "const el=document.getElementById('q'),q=el.value.trim();if(!q)return;"
         "const out=document.getElementById('out'),go=document.getElementById('go');"
-        "go.disabled=true;out.innerHTML=\"<div class='answer meta'>Thinking...</div>\";"
-        "try{const r=await fetch('/api/chat',{method:'POST',"
+        "go.disabled=true;"
+        "out.innerHTML=\"<div class='msg'><p class='q'>\"+esc(q)+\"</p>"
+        "<p class='a'><span class='spin'></span>Retrieving and answering...</p></div>\";"
+        "try{"
+        "const r=await fetch('/api/chat',{method:'POST',"
         "headers:{'Content-Type':'application/json'},"
         "body:JSON.stringify({run:RUN,question:q})});"
         "const d=await r.json();"
-        "if(d.error){out.innerHTML=\"<div class='answer'>\"+esc(d.error)+'</div>';}"
-        "else{out.innerHTML=\"<div class='answer'><p>\"+esc(d.answer)+'</p>'+"
-        "\"<p class='meta'>\"+(d.refused?'refused &middot; ':'')+"
-        "'cited: '+(d.citations.length?esc(d.citations.join(', ')):'none')+"
-        "'</p></div>';}"
-        "}catch(e){out.innerHTML=\"<div class='answer'>\"+esc(String(e))+'</div>';}"
-        "go.disabled=false;}"
-        "function esc(s){const d=document.createElement('div');"
-        "d.textContent=s;return d.innerHTML;}</script>",
+        "if(d.error){out.innerHTML=\"<div class='msg'><p class='q'>\"+esc(q)+"
+        "\"</p><p class='a'>\"+esc(d.error)+'</p></div>';}"
+        "else{"
+        "const foot=(d.refused?\"<span class='chip no'>refused</span>\":"
+        "\"<span class='chip ok'>answered</span>\")+"
+        "(d.citations||[]).map(function(c){"
+        "return \"<span class='chip key'>\"+esc(c)+'</span>'}).join('')+"
+        "(d.contract_ok?'':\"<span class='chip no'>contract violation</span>\");"
+        "const ret=(d.retrieved||[]).map(function(c){return esc(c)}).join('<br>');"
+        "out.innerHTML=\"<div class='msg'><p class='q'>\"+esc(q)+\"</p>\"+"
+        "\"<p class='a'>\"+esc(d.answer)+'</p>'+"
+        "\"<div class='foot'>\"+foot+'</div>'+"
+        "(ret?\"<details class='detail'><summary>Chunks retrieved for this \"+"
+        "\"question</summary><div class='body'>\"+ret+'</div></details>':'')+"
+        "'</div>';}"
+        "}catch(e){out.innerHTML=\"<div class='msg'><p class='a'>\"+"
+        "esc(String(e))+'</p></div>';}"
+        "go.disabled=false;el.select();}"
+        "</script>"
+    )
+    return HTMLResponse(
+        page(
+            f"Chat - {name}",
+            body + script,
+            nav_extra=f"<a href='/run/{name}'>Report</a><a href='/'>All runs</a>",
+        )
     )
 
 

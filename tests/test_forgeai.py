@@ -741,7 +741,9 @@ def test_serverless_app_serves_and_refuses_unknown_runs():
     # A run name is user input and is matched against the listing, never
     # joined onto a path, so traversal cannot reach outside runs/.
     assert client.get("/run/../../etc/passwd").status_code == 404
-    assert client.get("/chat/no-such-run").status_code == 200  # renders "no such run"
+    # An unknown run is a missing page, and says so with a status rather than
+    # a 200 carrying an apology.
+    assert client.get("/chat/no-such-run").status_code == 404
     assert client.post("/api/chat", json={"run": "nope", "question": "hi"}).status_code == 404
     assert client.post("/api/chat", json={"run": "nope"}).status_code == 400
 
@@ -784,3 +786,28 @@ def _parser_returning(func):
     parser = argparse.ArgumentParser()
     parser.set_defaults(func=func)
     return parser
+
+
+def test_build_is_disabled_on_a_shared_deployment(monkeypatch):
+    """A public Build button spends the host's quota for any passer-by."""
+    import importlib.util
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("forgeai_app", root / "app.py")
+    assert spec and spec.loader
+    pytest.importorskip("streamlit")
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setenv("FORGEAI_ALLOW_BUILD", "0")
+    spec.loader.exec_module(module)
+
+    allowed, why = module.build_allowed()
+    assert not allowed and "FORGEAI_ALLOW_BUILD" in why
+
+    monkeypatch.setenv("FORGEAI_ALLOW_BUILD", "1")
+    assert module.build_allowed()[0]
+
+    # With no override, a hosting marker is enough to turn builds off.
+    monkeypatch.delenv("FORGEAI_ALLOW_BUILD")
+    monkeypatch.setenv("K_SERVICE", "forgeai")
+    allowed, why = module.build_allowed()
+    assert not allowed and "shared deployment" in why
