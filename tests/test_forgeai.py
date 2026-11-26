@@ -680,3 +680,40 @@ def test_daily_quota_stops_the_run_instead_of_silently_falling_back(monkeypatch)
     assert isinstance(ProviderQuotaExhausted("x"), BudgetExceeded)
     # Critically, the deterministic fallback was NOT used to paper over it.
     assert ledger.fallbacks == 0
+
+
+# --- a passing average does not excuse an outstanding hallucination ---------
+#
+# The HR demo scored 0.889 at baseline, above the 0.85 shipping gate, while
+# still fabricating a figure on one case. Stopping there would have shipped an
+# agent whose single worst behaviour was never addressed, and the gap between
+# "0.889 overall" and "invents an entitlement once in twenty-two questions" is
+# exactly the gap the brief's honest-reporting requirement is about.
+
+def test_hallucination_blocks_the_happy_stop():
+    from forgeai.schemas import Scorecard
+
+    def should_stop(score: float, failures: dict, threshold: float = 0.85) -> bool:
+        card = Scorecard(
+            iteration=0, definition_fingerprint="x", total=22,
+            passed=int(score * 22), score=score, by_kind={},
+            failures_by_category=failures,
+        )
+        blocking = card.failures_by_category.get("hallucination", 0)
+        return card.score >= threshold and not blocking
+
+    # Clean enough, and nothing fabricated: ship it.
+    assert should_stop(0.889, {"prompt_defect": 3, "wrong_refusal": 1})
+    # Same score, one fabrication outstanding: keep working.
+    assert not should_stop(0.889, {"prompt_defect": 3, "hallucination": 1})
+    # Below the gate, stop logic is irrelevant either way.
+    assert not should_stop(0.70, {})
+
+
+def test_pass_threshold_is_overridable_from_the_environment(monkeypatch):
+    from forgeai.config import FactoryConfig
+
+    monkeypatch.setenv("FORGEAI_PASS_THRESHOLD", "0.95")
+    assert FactoryConfig().pass_threshold == 0.95
+    monkeypatch.delenv("FORGEAI_PASS_THRESHOLD")
+    assert FactoryConfig().pass_threshold == 0.85

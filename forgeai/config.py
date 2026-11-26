@@ -115,6 +115,10 @@ class FactoryConfig:
     max_iterations: int = 3          # hard cap from the brief
     min_eval_cases: int = 20         # hard floor from the brief
     max_clarifying_questions: int = 5
-    pass_threshold: float = 0.85     # score at which the loop stops happy
+    # Score at which the loop stops happy - overridable so a reviewer can
+    # demand a stricter bar than the default without editing code.
+    pass_threshold: float = field(
+        default_factory=lambda: float(os.environ.get("FORGEAI_PASS_THRESHOLD", "0.85"))
+    )
     prompt_tournament: bool = True   # stretch goal
     seed: int = 20260101

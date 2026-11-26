@@ -291,12 +291,29 @@ class Factory:
         attempted: set[str] = set()
 
         for iteration in range(1, cfg.max_iterations + 1):
-            if best_card.score >= cfg.pass_threshold:
+            # The aggregate score is a shipping gate, but it must not be the
+            # only one. A document-grounded agent that fabricates is not
+            # shippable at any average: "0.889 overall" and "it invents a
+            # figure once in twenty-two questions" are very different claims
+            # to the person who has to answer for the wrong figure. So the
+            # happy stop requires a passing score *and* a clean hallucination
+            # count. Other failure classes are survivable - a wrong refusal
+            # annoys a user, a fabricated entitlement misleads one - and the
+            # loop is allowed to leave those on the table once the score is
+            # good enough.
+            blocking = best_card.failures_by_category.get("hallucination", 0)
+            if best_card.score >= cfg.pass_threshold and not blocking:
                 stop_reason = (
                     f"pass threshold reached ({best_card.score:.3f} >= {cfg.pass_threshold})"
                 )
                 self.log(f"      stopping: {stop_reason}")
                 break
+            if best_card.score >= cfg.pass_threshold:
+                self.log(
+                    f"      score {best_card.score:.3f} clears the "
+                    f"{cfg.pass_threshold} threshold, but {blocking} "
+                    "hallucination(s) remain - not stopping on that"
+                )
             if self.ledger.exhausted():
                 stop_reason = "budget exhausted before iteration " + str(iteration)
                 self.log(f"      stopping: {stop_reason}")
