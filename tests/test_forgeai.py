@@ -270,6 +270,61 @@ class TestJudgeChecks:
         assert groundedness("The cafeteria closes at two o'clock.", context) < 0.5
 
 
+class TestEvalDocNameResolution:
+    """A real run misclassified all 6 edge cases as retrieval misses because the
+    model returned chunk labels where document names were expected."""
+
+    KNOWN = ["leave_policy.pdf", "pay_and_benefits.pdf", "workplace_conduct.pdf"]
+
+    def test_chunk_labels_are_reduced_to_file_names(self):
+        from forgeai.stages.evalgen import resolve_doc_names
+
+        out = resolve_doc_names(
+            ["leave_policy.pdf#2", "pay_and_benefits.pdf#3"], self.KNOWN, ["x.pdf"]
+        )
+        assert out == ["leave_policy.pdf", "pay_and_benefits.pdf"]
+
+    def test_paths_brackets_and_stems_all_resolve(self):
+        from forgeai.stages.evalgen import resolve_doc_names
+
+        assert resolve_doc_names(["[docs/leave_policy.pdf#1]"], self.KNOWN, []) == [
+            "leave_policy.pdf"
+        ]
+        assert resolve_doc_names(["leave_policy"], self.KNOWN, []) == ["leave_policy.pdf"]
+
+    def test_duplicates_collapse(self):
+        from forgeai.stages.evalgen import resolve_doc_names
+
+        out = resolve_doc_names(
+            ["leave_policy.pdf#1", "leave_policy.pdf#2"], self.KNOWN, []
+        )
+        assert out == ["leave_policy.pdf"]
+
+    def test_unresolvable_falls_back(self):
+        from forgeai.stages.evalgen import resolve_doc_names
+
+        assert resolve_doc_names(["invented.pdf"], self.KNOWN, ["leave_policy.pdf"]) == [
+            "leave_policy.pdf"
+        ]
+
+    def test_judge_tolerates_a_chunk_label_in_an_eval_case(self):
+        """Even an eval set written before the fix must grade correctly."""
+        import random
+
+        from forgeai.stages.judge import score_case
+
+        chunk = Chunk("leave#1", "leave", "leave_policy.pdf", 1,
+                      "Staff accrue 25 days of annual leave.")
+        case = EvalCase("edge-1", "edge", "How much leave?", ["25 days"],
+                        ["leave_policy.pdf#1"])
+        reply = AgentReply(answer="Staff accrue 25 days.", refused=False,
+                           citations=["leave_policy.pdf#1"], retrieved=["leave#1"])
+        result = score_case(case, reply, {chunk.chunk_id: chunk}, _client(),
+                            random.Random(0))
+        assert result.gold_chunk_retrieved, "chunk label must not read as a miss"
+        assert result.failure_category != "retrieval_miss"
+
+
 class TestFailureClassification:
     """The category a failure gets drives which fix is applied, so it matters."""
 

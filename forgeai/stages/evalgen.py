@@ -163,6 +163,37 @@ def _fallback_edge(chunks: list[Chunk], edge_type: str, n: int) -> list[dict]:
 _KIND_PREFIX = {"answerable": "ans", "out_of_scope": "oos", "edge": "edge"}
 
 
+
+def resolve_doc_names(values: list[str], known: list[str], fallback: list[str]) -> list[str]:
+    """Map whatever the model called a document onto a real file in the corpus.
+
+    The edge-case prompt shows passages labelled `[leave_policy.pdf#2]` and asks
+    for file names, and a small model reliably hands back the whole label -
+    ordinal included. `expected_source_docs` is then compared against the set of
+    *document names* that were retrieved, nothing matches, and every edge case
+    is misclassified as a retrieval miss. That is a silent false failure: it
+    understates the score and sends the optimizer chasing a retrieval problem
+    that does not exist. Normalising here is the cheap, central fix.
+    """
+    lookup = {k.lower(): k for k in known}
+    stems = {k.rsplit(".", 1)[0].lower(): k for k in known}
+    out: list[str] = []
+    for raw in values:
+        name = (raw or "").strip().strip("[]() ")
+        name = name.split("#", 1)[0].strip()          # drop a chunk ordinal
+        name = name.replace("\\", "/").rsplit("/", 1)[-1]  # drop any path
+        if not name:
+            continue
+        hit = lookup.get(name.lower()) or stems.get(name.rsplit(".", 1)[0].lower())
+        if hit is None:
+            # last resort: unique substring match against a real file name
+            cands = [k for k in known if name.lower() in k.lower()]
+            hit = cands[0] if len(cands) == 1 else None
+        if hit and hit not in out:
+            out.append(hit)
+    return out or list(fallback)
+
+
 def _mk_case(idx: int, kind: str, **kw) -> EvalCase:
     return EvalCase(
         case_id=f"{_KIND_PREFIX.get(kind, kind[:3])}-{idx:03d}", kind=kind, **kw
@@ -358,8 +389,11 @@ def generate_eval_set(
                 "edge",
                 first_str(item.get("question")),
                 expected_facts=as_str_list(item.get("expected_facts"), 4),
-                expected_source_docs=as_str_list(item.get("expected_source_docs"), 3)
-                or [c.doc_name for c in picks[:2]],
+                expected_source_docs=resolve_doc_names(
+                    as_str_list(item.get("expected_source_docs"), 3),
+                    known=sorted({c.doc_name for c in chunks}),
+                    fallback=[c.doc_name for c in picks[:2]],
+                ),
                 should_refuse=False,
                 edge_type=edge_type,
                 rationale=first_str(item.get("rationale")),

@@ -92,7 +92,7 @@ class BudgetConfig:
     """Stretch goal: a token/latency budget per run, with early stopping."""
 
     max_tokens: int = 400_000
-    max_seconds: int = 1800
+    max_seconds: int = 7200
     # An iteration that improves the score by less than this is not worth
     # another one; the loop stops early.
     min_gain_per_iteration: float = 0.02
@@ -101,7 +101,7 @@ class BudgetConfig:
     def from_env(cls) -> "BudgetConfig":
         return cls(
             max_tokens=int(os.environ.get("FORGEAI_MAX_TOKENS", "400000")),
-            max_seconds=int(os.environ.get("FORGEAI_MAX_SECONDS", "1800")),
+            max_seconds=int(os.environ.get("FORGEAI_MAX_SECONDS", "7200")),
             min_gain_per_iteration=float(
                 os.environ.get("FORGEAI_MIN_GAIN", "0.02")
             ),

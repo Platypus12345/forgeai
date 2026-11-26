@@ -187,10 +187,15 @@ def score_case(
     retrieved_docs = {
         chunk_index[cid].doc_name for cid in reply.retrieved if cid in chunk_index
     }
+    # Compare on bare document names: an eval case may carry a full chunk label
+    # ("leave_policy.pdf#2") rather than a file name, and treating that as a
+    # miss would invent a retrieval failure that never happened.
+    expected_docs = {
+        (d or "").split("#", 1)[0].strip().strip("[]() ")
+        for d in case.expected_source_docs
+    } - {""}
     gold_retrieved = (
-        True
-        if not case.expected_source_docs
-        else any(d in retrieved_docs for d in case.expected_source_docs)
+        True if not expected_docs else bool(expected_docs & retrieved_docs)
     )
 
     refusal_correct = reply.refused == case.should_refuse
